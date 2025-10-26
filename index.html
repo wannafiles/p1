@@ -337,7 +337,7 @@ PAC-MAN × RACE × PUZZLE<BR>
         <div id="game-ui" style="display: none;">
           　<div id="game-info">
               <div id="lap-and-time-row">
-                  <div id="current-time-display" style="flex: 1; text-align: left; font-weight: bold;">Time: 00.000</div>
+                  <div id="current-time-display" style="flex: 1; text-align: left; font-weight: bold;">00.000</div>
                   <div id="current-best-time-display" style="flex: 1; text-align: right; font-weight: bold;">BEST: --:--.---</div>
               </div>
               </div>
@@ -570,7 +570,7 @@ PAC-MAN × RACE × PUZZLE<BR>
             currentLap = 1;
             lapTimes = [];
             
-            timeDisplay.textContent = 'Time: 00.000';
+            timeDisplay.textContent = '00.000';
             countdownDisplay.textContent = '';
             
             lap1TimeDisplay.textContent = '--.---'; 
@@ -943,7 +943,7 @@ PAC-MAN × RACE × PUZZLE<BR>
 
             if (gameState === 'RACE' || gameState === 'FREE_RUN') {
                 const currentTime = Date.now() - lapStartTime + lapTimes.reduce((a, b) => a + b, 0);
-                timeDisplay.textContent = `Time: ${formatTime(currentTime)}`;
+                timeDisplay.textContent = `${formatTime(currentTime)}`;
                 if (currentBestTimeDisplay) { 
                     currentBestTimeDisplay.textContent = (gameMode === 'SINGLE_RACE') ? bestTimeText : '';
                     currentBestTimeDisplay.style.color = '#FFF'; 
@@ -951,7 +951,7 @@ PAC-MAN × RACE × PUZZLE<BR>
             } else if (gameState === 'FINISHED' || gameState === 'FINISHED_RESTART') { // 🚀 修正: FINISHED_RESTARTも考慮
                  const totalTime = lapTimes.reduce((a, b) => a + b, 0);
                  if (lapTimes.length === MAX_LAPS) { // 完走時
-                     timeDisplay.textContent = `TOTAL: ${formatTotalTime(totalTime)}`;
+                     timeDisplay.textContent = `${formatTotalTime(totalTime)}`;
                      if (currentBestTimeDisplay) { 
                          if (gameMode === 'SINGLE_RACE') {
                              currentBestTimeDisplay.textContent = bestTimeText;
@@ -1021,7 +1021,7 @@ PAC-MAN × RACE × PUZZLE<BR>
                  }
             } else if (gameState === 'FINISHED_FLASHING') {
                 const totalTime = lapTimes.reduce((a, b) => a + b, 0);
-                timeDisplay.textContent = `TOTAL: ${formatTotalTime(totalTime)}`;
+                timeDisplay.textContent = `${formatTotalTime(totalTime)}`;
                 if (currentBestTimeDisplay) { 
                     if (gameMode === 'SINGLE_RACE') {
                          currentBestTimeDisplay.textContent = bestTimeText;
