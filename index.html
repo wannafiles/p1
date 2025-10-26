@@ -406,6 +406,9 @@ PAC-MAN × RACE × PUZZLE<BR>
         const BOOST_DURATION_MS = 200; 
         const TIMING_WINDOW_MS = 50; 
         const MAX_LAPS = 3;
+        
+        // 🚀 追加: スワイプ操作用定数
+        const SWIPE_THRESHOLD = 20; // スワイプと認識する最小ピクセル数
 
         const TRACK_COLORS = [
             '#FF4444', // Maze 1 (赤色ベース)
@@ -443,6 +446,10 @@ PAC-MAN × RACE × PUZZLE<BR>
         let bestSingleRaceTimes = new Array(TRACKS.length).fill(Infinity);
         let bestGrandPrixTime1P = Infinity; 
         let bestGrandPrixTime2P = Infinity; 
+        
+        // 🚀 追加: スワイプ操作用状態変数
+        let touchStartX = 0;
+        let touchStartY = 0;
 
         let MAP = [];
         let MAP_WIDTH = 0;
@@ -1236,9 +1243,70 @@ PAC-MAN × RACE × PUZZLE<BR>
         }
 
 
-        // ... (イベントハンドラ: handlePointerDown, handlePointerUp, handleKeyDown, handleKeyUp) ...
-        function handlePointerDown(e) { e.preventDefault(); if (gameState !== 'FREE_RUN' && gameState !== 'RACE') return; const rect = canvas.getBoundingClientRect(); const touchX = (e.clientX || e.touches[0].clientX) - rect.left; const touchY = (e.clientY || e.touches[0].clientY) - rect.top; const dx = touchX - pacman.x; const dy = touchY - pacman.y; let moveDx = 0; let moveDy = 0; if (Math.abs(dx) > Math.abs(dy)) { moveDx = dx > 0 ? 1 : -1; } else { moveDy = dy > 0 ? 1 : -1; } attemptMove(moveDx, moveDy); }
-        function handlePointerUp(e) { e.preventDefault(); }
+        // 🚀 修正・追加されたイベントハンドラ
+        
+        /**
+         * タッチ/マウスクリック開始時の処理
+         * タッチイベントの場合はスワイプ開始座標を記録するのみ。
+         * マウスイベントの場合は、意図しない移動を避けるため何もしない。（PCではキーボードを利用）
+         */
+        function handlePointerDown(e) { 
+            e.preventDefault(); 
+            if (gameState !== 'FREE_RUN' && gameState !== 'RACE') return; 
+
+            // タッチイベントかどうかの判定 (e.touches があればタッチ)
+            const isTouch = e.touches && e.touches.length > 0;
+            
+            if (isTouch) {
+                const rect = canvas.getBoundingClientRect();
+                touchStartX = e.touches[0].clientX - rect.left;
+                touchStartY = e.touches[0].clientY - rect.top;
+            } 
+            // 以前のタップ相対位置による移動ロジックは削除されました。
+        }
+        
+        /**
+         * タッチ/マウスクリック終了時の処理
+         * タッチイベントの場合はスワイプを判定し、移動を試みる。
+         * マウスイベントの場合は何もしない。
+         */
+        function handlePointerUp(e) { 
+            e.preventDefault(); 
+            if (gameState !== 'FREE_RUN' && gameState !== 'RACE') return;
+            
+            // タッチイベントかどうかの判定 (e.changedTouches があればタッチ)
+            const isTouch = e.changedTouches && e.changedTouches.length > 0;
+            
+            if (isTouch) {
+                const rect = canvas.getBoundingClientRect();
+                const touchEndX = e.changedTouches[0].clientX - rect.left;
+                const touchEndY = e.changedTouches[0].clientY - rect.top;
+
+                const deltaX = touchEndX - touchStartX;
+                const deltaY = touchEndY - touchStartY;
+
+                // スワイプ判定 (閾値を超えているか)
+                if (Math.abs(deltaX) > SWIPE_THRESHOLD || Math.abs(deltaY) > SWIPE_THRESHOLD) {
+                    let moveDx = 0;
+                    let moveDy = 0;
+
+                    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                        // 横方向スワイプ
+                        moveDx = deltaX > 0 ? 1 : -1;
+                    } else {
+                        // 縦方向スワイプ
+                        moveDy = deltaY > 0 ? 1 : -1;
+                    }
+
+                    // 移動を試みる
+                    if (moveDx !== 0 || moveDy !== 0) {
+                        attemptMove(moveDx, moveDy);
+                    }
+                }
+            }
+            // マウスイベント (mouseup) の場合は何もしません。
+        }
+
         function handleKeyDown(e) { if (gameState !== 'FREE_RUN' && gameState !== 'RACE') return; let moveDx = 0; let moveDy = 0; switch(e.key) { case 'ArrowUp': case 'w': moveDy = -1; break; case 'ArrowDown': case 's': moveDy = 1; break; case 'ArrowLeft': case 'a': moveDx = -1; break; case 'ArrowRight': case 'd': moveDx = 1; break; } if (moveDx !== 0 || moveDy !== 0) { attemptMove(moveDx, moveDy); e.preventDefault(); } }
         function handleKeyUp(e) { /* No action */ }
         
@@ -1342,7 +1410,5 @@ PAC-MAN × RACE × PUZZLE<BR>
         showMenu(); 
     </script>
 
-</body>
-</html>
 </body>
 </html>
