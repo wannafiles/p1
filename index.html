@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAC-RACER</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            background-color: #222;
+            flex-direction: column;
+            font-family: Arial, sans-serif;
+            color: white;
+            margin: 0;
+            padding: 10px;
+            box-sizing: border-box;
+            /* スワイプ操作による画面の拡大縮小やスクロールを防止（特にiOS） */
+            touch-action: manipulation; 
+        }
+        #game-container {
+            width: 100%;
+            max-width: 360px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0 auto;
+　　　　　         }
+        /* ===== メニュー画面スタイル ===== */
+
+
+
+        #start-menu, #grandprix-results {
+            width: 100%;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+        .mode-button {
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+            /* 変更前のデフォルト: background-color: #00FF00; */
+            background-color: #FF4444; 
+            color: #FFF;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            width: 80%;
+            box-sizing: border-box;
+        }
+        .mode-button.race-mode {
+            background-color: #FFC000; /* グランプリモードは黄色 */
+            color: #000; 
+            font-size: 20px; /* 1P, 2Pを分けてボタンサイズを調整 */
+            margin-bottom: 5px;
+        }
+        /* 🚀 追加: 2Pモードのボタンカラー */
+        .mode-button.race-mode-2p {
+            background-color: #00AAFF; /* 2Pモードは青色 */
+            color: #FFF;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+
+	.pac-racer-title {
+    	    color: yellow;
+    	    font-size: 36px; 
+    	    font-weight: bold;
+	}
+	
+	.explanation {
+    	    color: white;
+    	    font-size: 14px; 
+	}
+	　　
+        
+        /* --- 🚀 コース別カラーの追加 --- */
+        .mode-button.track1-color {
+            background-color: #FF4444; /* 赤 */
+            color: #FFF;
+        }
+        .mode-button.track2-color {
+            background-color: #44FFFF; /* 水色/シアン */
+            color: #000;
+        }
+        .mode-button.track3-color {
+            background-color: #FF8800; /* 橙色 */
+            color: #FFF;
+        }
+        /* 🚀 追加: PINKコースのカラー */
+        .mode-button.track4-color {
+            background-color: #FF69B4; /* ピンク */
+            color: #FFF;
+        }
+        /* -------------------------- */
+        
+        /* 変更点: ベストタイム表示用のスタイル */
+        .best-time-display {
+            display: block;
+            margin-top: 2px; /* ボタンとの間隔を詰める */
+            margin-bottom: 10px; /* 次のボタンとの間隔 */
+            color: #000;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        /* 🚀 2Pベストタイム表示用のスタイル */
+        .best-time-display.grandprix-2p {
+            color: #FFF; /* 2Pボタンの文字色に合わせる */
+        }
+        #start-menu .best-time-display:last-of-type {
+            margin-bottom: 0;
+        }
+        #start-menu hr {
+             /* ベストタイム表示との間隔を調整 */
+            margin-top: 15px;
+        }
+
+
+        /* ===== ゲームUIスタイル (修正/追加) ===== */
+        #game-info {
+            width: 100%;
+            margin-bottom: 0px; /* キャンバスとの間隔を少し詰める */
+            font-size: 20px;
+            text-align: center;
+        }
+       #game-ui {
+            flex-direction: column; /* アイテムを縦に並べる */
+            align-items: center;    /* 中央揃えにする */
+            width: 100%;            /* 親要素の幅に合わせる */
+        }
+        
+        /* 🚀 追加: ラップ数と現在のタイムを横並びにするスタイル */
+        #lap-and-time-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 90%; /* 中央揃えのため幅を制限 */
+            margin: 0 auto;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        /* 🚀 追加: 現在のプレイヤー表示 */
+        #current-player-display {
+             font-size: 20px;
+             font-weight: bold;
+             color: #FFF;
+             flex: 1; 
+             text-align: center;
+             /* 既存のcurrent-time-displayやcurrent-best-time-displayの配置を調整 */
+             margin-top: 5px; 
+             margin-bottom: 5px;
+        }
+
+        /* 🚀 修正: ラップタイム履歴とトータルタイムの4列表示スタイル */
+        #simple-lap-display {
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); /* 4列 (Lap1, Lap2, Lap3, Total) */
+            grid-template-rows: auto auto; /* 2行 (ラベル, タイム) */
+            gap: 0px; /* 隙間なし */
+            width: 100%; /* 最大幅いっぱいに広げる */
+            max-width: 360px; /* コンテナの最大幅に合わせる */
+            margin: 0px auto 0 auto; /* 中央揃えに変更 */
+            /* ▼▼▼▼▼ 修正: パディングを最小にし、背景色を黒にする ▼▼▼▼▼ */
+            padding: 0px 0; /* 上下のパディングを最小(5pxから2pxへ) */
+            background-color: #222; /* 背景色を黒に変更 */
+            /* ▲▲▲▲▲ 修正 ▲▲▲▲▲ */
+            border-radius: 5px;
+            font-size: 14px; 
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .lap-header-item {
+            /* 1行目のスタイル (Lap 1, Lap 2, Lap 3, Total:) */
+            text-align: center; /* 中央寄せ */
+            padding: 3px 0;
+            color: #DDD;
+            border-bottom: 1px solid #777; /* 区切り線 */
+        }
+        
+        .lap-time-value {
+            /* 2行目のスタイル (タイムの値) */
+            text-align: center; /* 中央寄せ */
+            padding: 3px 0;
+            color: #DDD;
+            font-size: 16px; /* 値を少し大きく */
+        }
+        
+        /* 4列目 (Total) の特別なスタイル */
+        .total-style-header {
+            color: #FFC000; /* 黄色 */
+            font-size: 16px;
+            border-bottom: 1px solid #FFC000; /* 区切り線を黄色に */
+        }
+        .total-style-value {
+            color: #FFC000; /* 黄色 */
+            font-size: 18px; /* 値をさらに大きく */
+        }
+        
+        /* -------------------------- */
+
+
+        /* 削除: #lap-times, .lap-time-row, #boost-hint のスタイルは削除 */
+        
+        #gameCanvas {
+            max-width: 360px;
+            width: 100%;
+            height: auto;
+            border: 5px solid #000;
+            background-color: #000;
+            /* キャンバス上でのタッチ操作でスクロールが起きないようにする */
+            touch-action: none;
+        }
+        
+        #startButton {
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 10px;
+            background-color: #00FF00;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            /* 変更: mode-button クラスのスタイルを適用するため幅を指定 */
+            width: 90%;
+            box-sizing: border-box;
+        }
+        #startButton.race-mode {
+            background-color: #FFC000;
+        }
+        /* 🚀 2PモードのstartButton */
+        #startButton.race-mode-2p {
+            background-color: #00AAFF;
+            color: #FFF;
+        }
+        #countdown-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 100px;
+            color: red;
+            font-weight: bold;
+            text-shadow: 0 0 10px black;
+            z-index: 10;
+        }
+        
+        /* ===== 🚀 田の字レイアウト用スタイル (ここから追加) ===== */
+        #track-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 2列 */
+            gap: 10px; /* ボタン間の隙間 */
+            width: 90%; /* 全体の幅 */
+            margin: 0px auto 0 auto; /* 上下にマージン、左右中央揃え */
+        }
+        
+        #track-grid .mode-button {
+            width: 100%; /* グリッドセルいっぱいに広げる (90%を上書き) */
+            height: 50px;  /* 高さを指定して正方形に近づける */
+            margin: 0;     /* マージンをリセット */
+            display: flex;
+            flex-direction: column; /* 中身を縦に並べる */
+            justify-content: center;
+            align-items: center;
+            font-size: 18px; /* トラック名を大きく */
+            padding: 5px;
+        }
+        
+        #track-grid .best-time-display {
+            margin: 5px 0 0 0; /* トラック名との間にマージン */
+            font-size: 14px;
+            color: inherit; /* ボタンの文字色を継承 (白 or 黒) */
+            /* .best-time-display のマージン設定を上書き */
+        }
+        /* ------------------------------------- (ここまで追加) */
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        
+        <div id="start-menu">
+PAC-MAN × RACE × PUZZLE<BR>
+<span class="explanation">パックマンが迷路でレース大会！?<BR>
+交差点は絶対直進、 突き当りでターン!<BR>
+最短ルートとターン加速で記録更新だ！</span>
+　　　　　　<hr style="border-top: 1px solid #777; width: 90%;">
+	    <span class="pac-racer-title">🏆P1 GRAND PRIX</span>
+            <p>４コース、各３周のグランプリレース</p>
+            
+            <button id="grandPrixButton1P" class="mode-button race-mode">SOLO RACE
+<div id="bestGrandPrixTimeDisplay1P" class="best-time-display">Best: --:--.---</div> </button>
+            
+            <button id="grandPrixButton2P" class="mode-button race-mode-2p">MATCH RACE -2P対戦
+<div id="bestGrandPrixTimeDisplay2P" class="best-time-display grandprix-2p">Best: --:--.---</div> </button>
+           
+            <hr style="border-top: 1px solid #777; width: 90%;">
+            <p>コースを選んで練習走行</p>
+            
+            <div id="track-grid">
+                <button id="track1Button" class="mode-button track1-color" data-track-index="0">
+                    RED
+                    <div id="bestTimeTrack0" class="best-time-display">Best: --:--.---</div>
+                </button>
+                <button id="track2Button" class="mode-button track2-color" data-track-index="1">
+                    BLUE
+                    <div id="bestTimeTrack1" class="best-time-display">Best: --:--.---</div>
+                </button>
+                <button id="track3Button" class="mode-button track3-color" data-track-index="2">
+                    ORANGE
+                    <div id="bestTimeTrack2" class="best-time-display">Best: --:--.---</div>
+                </button>
+                <button id="track4Button" class="mode-button track4-color" data-track-index="3">
+                    PINK
+                    <div id="bestTimeTrack3" class="best-time-display">Best: --:--.---</div>
+                </button>
+            </div>
+            
+            </div>
+       
+ <div id="grandprix-results" style="display: none; margin-top: 10px;">
+            <h2>🏆 総合結果</h2>
+            <div id="grandprix-score-list"></div>
+            <hr style="border-top: 1px solid #777; width: 90%;">
+            <div id="grandprix-total-time" style="font-size: 20px; font-weight: bold; margin-top: 10px;"></div>
+            <button id="resultButton" class="mode-button" style="margin-top: 15px;">ボタン</button>
+        </div>
+
+        <div id="game-ui" style="display: none;">
+          　<div id="game-info">
+              <div id="lap-and-time-row">
+                  <div id="current-time-display" style="flex: 1; text-align: left; font-weight: bold;">Time: 00.000</div>
+                  <div id="current-best-time-display" style="flex: 1; text-align: right; font-weight: bold;">BEST: --:--.---</div>
+              </div>
+              </div>
+            
+            <canvas id="gameCanvas" width="360" height="396"></canvas>
+           
+            <div id="simple-lap-display">
+                <div class="lap-header-item">Lap 1</div>
+                <div class="lap-header-item">Lap 2</div>
+                <div class="lap-header-item">Lap 3</div>
+                <div class="lap-header-item total-style-header">Total:</div>
+                
+                <div id="lap1-time" class="lap-time-value">--.---</div>
+                <div id="lap2-time" class="lap-time-value">--.---</div>
+                <div id="lap3-time" class="lap-time-value">--.---</div>
+                <div id="total-time" class="lap-time-value total-style-value">--:--.---</div>
+            </div>
+            <button id="startButton">レーススタート</button>
+            
+            <button id="returnToMenuButtonGame" class="mode-button" style="margin-top: 10px; background-color: #888;">メニューに戻る</button>
+               <div id="current-player-display" style="display:none"></div>
+          
+        </div>
+    </div>
+    
+    <div id="countdown-display"></div>
+
+<script>
+        // ... (既存のcanvas, ctx, 各種要素の取得) ...
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const timeDisplay = document.getElementById('current-time-display');
+        const startButton = document.getElementById('startButton');
+        const countdownDisplay = document.getElementById('countdown-display');
+
+        // 新規追加要素
+        const startMenu = document.getElementById('start-menu');
+        const gameUI = document.getElementById('game-ui');
+        const grandPrixResultsDiv = document.getElementById('grandprix-results');
+        const grandPrixScoreList = document.getElementById('grandprix-score-list');
+        const grandPrixTotalTime = document.getElementById('grandprix-total-time');
+        
+        // 🚀 修正: 結果画面のボタンIDを変更
+        const resultButton = document.getElementById('resultButton'); 
+        
+        const currentBestTimeDisplay = document.getElementById('current-best-time-display');
+        const currentPlayerDisplay = document.getElementById('current-player-display');
+
+        const lap1TimeDisplay = document.getElementById('lap1-time');
+        const lap2TimeDisplay = document.getElementById('lap2-time');
+        const lap3TimeDisplay = document.getElementById('lap3-time');
+        const totalTimeDisplay = document.getElementById('total-time');
+        
+        const grandPrixButton1P = document.getElementById('grandPrixButton1P');
+        const grandPrixButton2P = document.getElementById('grandPrixButton2P');
+        const bestGrandPrixTimeDisplay1P = document.getElementById('bestGrandPrixTimeDisplay1P');
+        const bestGrandPrixTimeDisplay2P = document.getElementById('bestGrandPrixTimeDisplay2P');
+
+
+        // === ゲーム定数 ===
+        // ... (変更なし) ...
+        const TILE_SIZE = 36; 
+        const PACMAN_SIZE = 30;
+        const NORMAL_SPEED = 3; 
+        const BOOST_SPEED = 6;  
+        const BOOST_DURATION_MS = 200; 
+        const TIMING_WINDOW_MS = 50; 
+        const MAX_LAPS = 3;
+
+        const TRACK_COLORS = [
+            '#FF4444', // Maze 1 (赤色ベース)
+            '#44FFFF', // Maze 2 (水色ベース)
+            '#FF8800',  // Maze 3 (橙色ベース)
+            '#FF69B4'   // Maze 4 (ピンク色ベース)
+        ];
+
+        const TRACKS = [
+            { name: "RED", map: ["MMMMMMMMM", "M...M...M", "M.M.M.M.M", "M.......M", "M.M.M.MMM", "....M....", "MMM.M.M.M", "M...P...M", "M.M.M.M.M", "M...M...M", "MMMMMMMMM"] },
+            { name: "BLUE", map: ["MMMMMMMMM", "M...MMMMM", "M.M...MMM", "M.M.M.MMM", "M.M......", "M.M.M.M.M", "....P.M.M", "MMM.M.M.M", "MMM...M.M", "MMMMM...M", "MMMMMMMMM",] },
+            { name: "ORANGE", map: ["MMMMMMMMMM", "M......MMM", "M.M.MM.MMM", "M.M......M", "M.M.MM.M.M", ".........M", "MMM.MM.MMM", "M....P....", "M.M.MM.M.M", "M......M.M", "MMM.MM.M.M", "MMM......M", "MMMMMMMMMM"] },
+            { name: "PINK", map: ["MMMMMMMMM", "M..M....M", "M.....M.M", "M.MMM.M.M", "M.M.....M", "M.M.M.MMM", "....M....", "MMM.M.M.M", "M...P.M.M", "M.M.MMM.M", "M.M.....M", "M....M..M", "MMMMMMMMM"] }
+        ];
+
+        // === ゲーム状態変数 ===
+        // 🚀 修正: SHOWING_INTERIM_RESULTS を追加
+        let gameState = 'MENU'; // MENU, READY, COUNTDOWN, RACE, FINISHED, FINISHED_RESTART, TRACK_FINISHED_WAIT, GRAND_PRIX_RESULTS, GRAND_PRIX_WAIT, SHOWING_INTERIM_RESULTS
+        let gameMode = 'SINGLE_RACE'; 
+        let currentTrackIndex = 0; 
+        
+        let grandPrixData = {
+            player1: { name: "PLAYER 1", results: [] }, 
+            player2: { name: "PLAYER 2", results: [] } 
+        }; 
+        let currentPlayer = 'player1'; 
+        let totalGrandPrixTime = 0; 
+        
+        let flashIntervalId = null; 
+        let flashCount = 0; 
+        const FLASH_MAX = 8; 
+        
+        let currentMazeColor = '#0000FF';
+        
+        let bestSingleRaceTimes = new Array(TRACKS.length).fill(Infinity);
+        let bestGrandPrixTime1P = Infinity; 
+        let bestGrandPrixTime2P = Infinity; 
+
+        let MAP = [];
+        let MAP_WIDTH = 0;
+        let MAP_HEIGHT = 0;
+        let initialPacmanX = 0;
+        let initialPacmanY = 0;
+        
+        let remainingCookies = 0;
+        let score = 0;
+        let grid = [];
+        let currentLap = 1;
+        let lapTimes = [];
+        let lapStartTime = 0; 
+        let countdownTimer;
+
+        let pacman = {
+            x: 0, y: 0, dx: 0, dy: 0, nextDx: 0, nextDy: 0,
+            isBoosting: false, boostEndTime: 0, turnAttemptTime: 0, stoppedTime: 0      
+        };
+        
+        // 🚀 追加: グランプリ途中結果表示用の一時変数
+        let nextTrackForGP = 0;
+        let nextPlayerForGP = 'player1';
+
+
+        // --- 関数定義 ---
+        
+        function formatTime(ms) {
+            const sign = ms < 0 ? "-" : "";
+            const absMs = Math.abs(ms);
+            const totalSeconds = Math.floor(absMs / 1000); 
+            const milliseconds = absMs % 1000;
+            const secStr = String(totalSeconds).padStart(2, '0');
+            const msStr = String(milliseconds).padStart(3, '0');
+            return `${sign}${secStr}.${msStr}`;
+        }
+
+        function formatTotalTime(ms) {
+            const sign = ms < 0 ? "-" : "";
+            const absMs = Math.abs(ms);
+            const totalSeconds = Math.floor(absMs / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const milliseconds = absMs % 1000;
+            const minStr = String(minutes).padStart(2, '0');
+            const secStr = String(seconds).padStart(2, '0');
+            const msStr = String(milliseconds).padStart(3, '0');
+            return `${sign}${minStr}:${secStr}.${msStr}`;
+        }
+        
+        function setupTrack(trackIndex) {
+            const track = TRACKS[trackIndex];
+            MAP = track.map;
+            MAP_WIDTH = MAP[0].length;
+            MAP_HEIGHT = MAP.length; 
+            
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                for (let x = 0; x < MAP_WIDTH; x++) {
+                    if (MAP[y][x] === 'P') {
+                        initialPacmanX = x * TILE_SIZE + TILE_SIZE / 2;
+                        initialPacmanY = y * TILE_SIZE + TILE_SIZE / 2;
+                        return;
+                    }
+                }
+            }
+        }
+
+        /**
+         * 🚀 修正: resetCookiesForNextLap 関数
+         */
+        function resetCookiesForNextLap() {
+            remainingCookies = 0;
+            grid = []; // グリッドを初期化
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                grid[y] = grid[y] || [];
+                for (let x = 0; x < MAP_WIDTH; x++) {
+                    const char = MAP[y][x];
+                    if (char === 'M') {
+                        grid[y][x] = 0; // 🚀 壁は 0
+                    } else if (char === 'P' || char === ' ') { // 🚀 スタート地点と空白は 2
+                        grid[y][x] = 2;
+                    } else { // '.' ドット (クッキー)
+                        grid[y][x] = 1; // 🚀 ドットは 1
+                        remainingCookies++;
+                    }
+                }
+            }
+        }
+
+        function initializeGame(mode, trackIndex, player = 'player1') { 
+            gameMode = mode;
+            currentTrackIndex = trackIndex;
+            gameState = 'READY';
+            
+            if (gameMode === 'GRAND_PRIX_2P') {
+                 currentPlayer = player;
+            } else if (gameMode === 'GRAND_PRIX_1P') {
+                 currentPlayer = 'player1'; 
+            }
+            
+            setupTrack(currentTrackIndex);
+            currentMazeColor = TRACK_COLORS[currentTrackIndex];
+            
+            canvas.width = MAP_WIDTH * TILE_SIZE;
+            canvas.height = MAP_HEIGHT * TILE_SIZE; 
+            grid = [];
+            resetCookiesForNextLap(); // 🚀 修正された関数を呼ぶ
+            pacman.x = initialPacmanX;
+            pacman.y = initialPacmanY;
+            pacman.dx = 0;
+            pacman.dy = 0;
+            pacman.nextDx = 0;
+            pacman.nextDy = 0;
+            pacman.isBoosting = false;
+            pacman.boostEndTime = 0;
+            pacman.turnAttemptTime = 0;
+            pacman.stoppedTime = Date.now();
+            currentLap = 1;
+            lapTimes = [];
+            
+            timeDisplay.textContent = 'Time: 00.000';
+            countdownDisplay.textContent = '';
+            
+            lap1TimeDisplay.textContent = '--.---'; 
+            lap2TimeDisplay.textContent = '--.---'; 
+            lap3TimeDisplay.textContent = '--.---'; 
+            totalTimeDisplay.textContent = '--:--.---'; 
+
+            startMenu.style.display = 'none';
+            grandPrixResultsDiv.style.display = 'none'; // 常に非表示に
+            gameUI.style.display = 'flex';
+            
+            if (currentPlayerDisplay) { 
+                if (gameMode === 'GRAND_PRIX_2P') {
+                     currentPlayerDisplay.textContent = `${grandPrixData[currentPlayer].name}の番 (${TRACKS[currentTrackIndex].name}コース)`;
+                     currentPlayerDisplay.style.color = currentPlayer === 'player1' ? '#FFC000' : '#00AAFF';
+                } else {
+                     currentPlayerDisplay.textContent = ''; 
+                }
+            }
+
+            const bestTime = bestSingleRaceTimes[currentTrackIndex];
+            if (currentBestTimeDisplay) {
+                currentBestTimeDisplay.textContent = bestTime === Infinity ? 'BEST: --:--.---' : `BEST: ${formatTotalTime(bestTime)}`;
+            }
+
+
+            if (gameMode === 'SINGLE_RACE') {
+                startButton.textContent = 'フリー走行開始';
+                startButton.classList.remove('race-mode', 'race-mode-2p', 'track1-color', 'track2-color', 'track3-color', 'track4-color');
+            } else if (gameMode === 'GRAND_PRIX_1P') {
+                startButton.textContent = '3LAPタイムレーススタート';
+                startButton.classList.add('race-mode');
+                startButton.classList.remove('race-mode-2p');
+                applyTrackColorToButton(currentTrackIndex);
+            } else if (gameMode === 'GRAND_PRIX_2P') { 
+                startButton.textContent = `${grandPrixData[currentPlayer].name}スタート！`;
+                startButton.classList.add('race-mode-2p');
+                startButton.classList.remove('race-mode');
+                applyTrackColorToButton(currentTrackIndex);
+            }
+            
+            startButton.disabled = false;
+            
+            if (!window.gameLoopRunning) {
+                window.gameLoopRunning = true;
+                gameLoop();
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawMaze();
+            drawCookies(); // 🚀 初回描画時にもドットを描画
+            drawPacman();
+        }
+        
+        function applyTrackColorToButton(trackIndex) {
+             startButton.classList.remove('track1-color', 'track2-color', 'track3-color', 'track4-color');
+             if (trackIndex === 0) startButton.classList.add('track1-color');
+             else if (trackIndex === 1) startButton.classList.add('track2-color');
+             else if (trackIndex === 2) startButton.classList.add('track3-color');
+             else if (trackIndex === 3) startButton.classList.add('track4-color');
+        }
+
+        function startCountdown() {
+            gameState = 'COUNTDOWN';
+            startButton.disabled = true;
+            let count = 3;
+            countdownDisplay.style.color = 'yellow';
+            timeDisplay.textContent = 'READY';
+            countdownDisplay.textContent = count;
+            
+            if (currentPlayerDisplay) { 
+                if (gameMode === 'GRAND_PRIX_2P') {
+                     currentPlayerDisplay.textContent = `${grandPrixData[currentPlayer].name} - READY (${TRACKS[currentTrackIndex].name}コース)`;
+                }
+            }
+
+            countdownTimer = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdownDisplay.textContent = count;
+                } else if (count === 0) {
+                    countdownDisplay.textContent = 'GO!';
+                    countdownDisplay.style.color = 'lime';
+                    
+                    gameState = gameMode === 'SINGLE_RACE' ? 'FREE_RUN' : 'RACE';
+                    lapStartTime = Date.now();
+                    
+                    if (gameMode === 'GRAND_PRIX_2P') {
+                        startButton.textContent = `${grandPrixData[currentPlayer].name} RACING...`;
+                        startButton.disabled = true; 
+                        if (currentPlayerDisplay) { 
+                           currentPlayerDisplay.textContent = `${grandPrixData[currentPlayer].name} - GO! (${TRACKS[currentTrackIndex].name}コース)`;
+                        }
+                    } else {
+                        startButton.textContent = gameMode === 'SINGLE_RACE' ? '走行をやめる' : 'RACING...';
+                        startButton.disabled = gameMode !== 'SINGLE_RACE'; 
+                    }
+                    
+                    if(gameMode === 'SINGLE_RACE') startButton.classList.remove('race-mode', 'race-mode-2p', 'track1-color', 'track2-color', 'track3-color', 'track4-color');
+                    else if (gameMode === 'GRAND_PRIX_1P') {
+                        startButton.classList.add('race-mode');
+                        startButton.classList.remove('race-mode-2p', 'track1-color', 'track2-color', 'track3-color', 'track4-color');
+                    } else if (gameMode === 'GRAND_PRIX_2P') {
+                        startButton.classList.add('race-mode-2p');
+                        startButton.classList.remove('race-mode', 'track1-color', 'track2-color', 'track3-color', 'track4-color');
+                    }
+                    
+                } else { // count === -1 
+                    clearInterval(countdownTimer);
+                    countdownDisplay.textContent = '';
+                }
+            }, 1000);
+        }
+        function drawMaze() {
+            ctx.fillStyle = currentMazeColor; 
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                for (let x = 0; x < MAP_WIDTH; x++) {
+                    if (grid[y] && grid[y][x] === 0) { // 🚀 壁は 0
+                        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+        }
+        
+        /**
+         * 🚀 追加: ドットを描画する関数
+         */
+        function drawCookies() {
+            ctx.fillStyle = '#FFF'; // 白色
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                for (let x = 0; x < MAP_WIDTH; x++) {
+                    if (grid[y] && grid[y][x] === 1) { // 🚀 ドットは 1
+                        ctx.beginPath();
+                        ctx.arc(x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+
+        function drawPacman() {
+            let pacmanColor = '#FFFF00'; 
+            if (gameMode === 'GRAND_PRIX_2P') {
+                 pacmanColor = currentPlayer === 'player1' ? '#FFC000' : '#00AAFF';
+            }
+            
+            ctx.fillStyle = pacman.isBoosting ? '#FF0000' : pacmanColor;
+            ctx.beginPath();
+            
+            const isStopped = (gameState !== 'RACE' && gameState !== 'FREE_RUN') || (pacman.dx === 0 && pacman.dy === 0);
+
+            if (isStopped) {
+                ctx.arc(pacman.x, pacman.y, PACMAN_SIZE / 2, 0, Math.PI * 2);
+            } else {
+                const mouthAngle = 0.2 * Math.PI * Math.abs(Math.sin(Date.now() / 200));
+                let startAngle, endAngle;
+                if (pacman.dx > 0) { startAngle = mouthAngle; endAngle = 2 * Math.PI - mouthAngle; } 
+                else if (pacman.dx < 0) { startAngle = Math.PI + mouthAngle; endAngle = 3 * Math.PI - mouthAngle; } 
+                else if (pacman.dy < 0) { startAngle = 1.5 * Math.PI + mouthAngle; endAngle = 3.5 * Math.PI - mouthAngle; } 
+                else { startAngle = 0.5 * Math.PI + mouthAngle; endAngle = 2.5 * Math.PI - mouthAngle; }
+                ctx.arc(pacman.x, pacman.y, PACMAN_SIZE / 2, startAngle, endAngle);
+                ctx.lineTo(pacman.x, pacman.y);
+            }
+            ctx.fill();
+        }
+        function attemptMove(dx, dy) {
+            if (gameState !== 'FREE_RUN' && gameState !== 'RACE') return;
+            const gridX = Math.floor(pacman.x / TILE_SIZE);
+            const gridY = Math.floor(pacman.y / TILE_SIZE);
+            const nextX = gridX + dx;
+            const nextY = gridY + dy;
+            const isWall = nextX < 0 || nextX >= MAP_WIDTH || nextY < 0 || nextY >= MAP_HEIGHT || (grid[nextY] && grid[nextY][nextX] === 0);
+            if (!isWall) {
+                pacman.nextDx = dx;
+                pacman.nextDy = dy;
+                pacman.turnAttemptTime = Date.now();
+            }
+        }
+
+        function updatePacman() {
+            if (gameState !== 'FREE_RUN' && gameState !== 'RACE') return;
+
+            const currentGridX = Math.floor(pacman.x / TILE_SIZE);
+            const currentGridY = Math.floor(pacman.y / TILE_SIZE);
+            const centerX = currentGridX * TILE_SIZE + TILE_SIZE / 2;
+            const centerY = currentGridY * TILE_SIZE + TILE_SIZE / 2;
+
+            let dx = pacman.dx;
+            let dy = pacman.dy;
+            let currentSpeed = NORMAL_SPEED;
+
+            if (pacman.isBoosting) {
+                if (Date.now() < pacman.boostEndTime) currentSpeed = BOOST_SPEED;
+                else pacman.isBoosting = false;
+            }
+
+            if (pacman.dx === 0 && pacman.dy === 0 && (pacman.nextDx !== 0 || pacman.nextDy !== 0)) {
+                pacman.x = centerX;
+                pacman.y = centerY;
+                const timeDiff = pacman.turnAttemptTime - pacman.stoppedTime;
+                if (pacman.stoppedTime !== 0 && Math.abs(timeDiff) <= TIMING_WINDOW_MS) {
+                    pacman.isBoosting = true;
+                    pacman.boostEndTime = Date.now() + BOOST_DURATION_MS;
+                    currentSpeed = BOOST_SPEED;
+                } else {
+                    pacman.isBoosting = false;
+                }
+                pacman.dx = pacman.nextDx;
+                pacman.dy = pacman.nextDy;
+                pacman.nextDx = 0;
+                pacman.nextDy = 0;
+                dx = pacman.dx;
+                dy = pacman.dy;
+            }
+
+            let nextX = pacman.x + dx * currentSpeed;
+            let nextY = pacman.y + dy * currentSpeed;
+            let stoppedByWall = false;
+
+            if (dx !== 0) {
+                const checkX = dx > 0 ? currentGridX + 1 : currentGridX - 1;
+                if (checkX >= 0 && checkX < MAP_WIDTH && grid[currentGridY][checkX] === 0) {
+                    if ((dx > 0 && nextX + PACMAN_SIZE / 2 > checkX * TILE_SIZE) || (dx < 0 && nextX - PACMAN_SIZE / 2 < (checkX + 1) * TILE_SIZE)) {
+                        nextX = dx > 0 ? checkX * TILE_SIZE - PACMAN_SIZE / 2 - 1 : (checkX + 1) * TILE_SIZE + PACMAN_SIZE / 2 + 1;
+                        pacman.dx = 0; stoppedByWall = true;
+                    }
+                }
+            }
+            if (dy !== 0) {
+                const checkY = dy > 0 ? currentGridY + 1 : currentGridY - 1;
+                if (checkY >= 0 && checkY < MAP_HEIGHT && grid[checkY][currentGridX] === 0) {
+                    if ((dy > 0 && nextY + PACMAN_SIZE / 2 > checkY * TILE_SIZE) || (dy < 0 && nextY - PACMAN_SIZE / 2 < (checkY + 1) * TILE_SIZE)) {
+                        nextY = dy > 0 ? checkY * TILE_SIZE - PACMAN_SIZE / 2 - 1 : (checkY + 1) * TILE_SIZE + PACMAN_SIZE / 2 + 1;
+                        pacman.dy = 0; stoppedByWall = true;
+                    }
+                }
+            }
+            
+            // ワープゾーンの処理 (全コース共通ロジックに修正)
+             const newGridX = Math.floor(nextX / TILE_SIZE);
+             const newGridY = Math.floor(nextY / TILE_SIZE);
+             
+             let warpInY = -1;
+             let warpOutX = -1;
+             let warpOutY = -1;
+
+             if (currentTrackIndex === 3 && newGridY === 6) { warpInY = 6; } // PINK
+             else if (currentTrackIndex === 2 && (newGridY === 5 || newGridY === 7)) { warpInY = newGridY; } // ORANGE
+             else if (currentTrackIndex === 0 && newGridY === 5) { warpInY = 5; } // RED
+             else if (currentTrackIndex === 1 && (newGridY === 4 || newGridY === 6)) { warpInY = newGridY; } // BLUE
+
+             if (warpInY !== -1) {
+                 if (newGridX === -1) { // Left warp
+                     warpOutX = MAP_WIDTH - 1;
+                     // Determine warp out Y based on track and warpInY
+                     if (currentTrackIndex === 3 && warpInY === 6) { warpOutY = 6; }
+                     else if (currentTrackIndex === 2 && warpInY === 5) { warpOutY = 7; }
+                     else if (currentTrackIndex === 0 && warpInY === 5) { warpOutY = 5; }
+                     else if (currentTrackIndex === 1 && warpInY === 6) { warpOutY = 4; }
+                 } else if (newGridX === MAP_WIDTH) { // Right warp
+                     warpOutX = 0;
+                     // Determine warp out Y based on track and warpInY
+                     if (currentTrackIndex === 3 && warpInY === 6) { warpOutY = 6; }
+                     else if (currentTrackIndex === 2 && warpInY === 7) { warpOutY = 5; }
+                     else if (currentTrackIndex === 0 && warpInY === 5) { warpOutY = 5; }
+                     else if (currentTrackIndex === 1 && warpInY === 4) { warpOutY = 6; }
+                 }
+
+                 if (warpOutX !== -1 && warpOutY !== -1) {
+                     nextX = warpOutX * TILE_SIZE + TILE_SIZE / 2; 
+                     nextY = warpOutY * TILE_SIZE + TILE_SIZE / 2;        
+                     pacman.x = nextX;
+                     pacman.y = nextY;
+                     return; // Skip remaining update logic after warp
+                 }
+             }
+            
+            pacman.x = nextX;
+            pacman.y = nextY;
+
+            if (stoppedByWall) {
+                pacman.stoppedTime = Date.now();
+                pacman.isBoosting = false; 
+            } else if (pacman.dx !== 0 || pacman.dy !== 0) {
+                 pacman.stoppedTime = 0;
+            }
+            
+            checkCookieCollision();
+        }
+
+
+        function checkCookieCollision() {
+            const gridX = Math.floor(pacman.x / TILE_SIZE);
+            const gridY = Math.floor(pacman.y / TILE_SIZE);
+
+            if (grid[gridY] && grid[gridY][gridX] === 1) { // 🚀 ドットは 1
+                grid[gridY][gridX] = 2; // 🚀 空白は 2
+                remainingCookies--;
+
+                if (remainingCookies === 0) {
+                    const lapTime = Date.now() - lapStartTime;
+                    lapTimes.push(lapTime);
+                    
+                    if (currentLap === 1) lap1TimeDisplay.textContent = formatTime(lapTime);
+                    else if (currentLap === 2) lap2TimeDisplay.textContent = formatTime(lapTime);
+                    else if (currentLap === 3) {
+                         lap3TimeDisplay.textContent = formatTime(lapTime);
+                         const totalTime = lapTimes.reduce((a, b) => a + b, 0);
+                         totalTimeDisplay.textContent = formatTotalTime(totalTime);
+                    }
+                    
+                    if (currentLap < MAX_LAPS) {
+                        currentLap++;
+                        resetCookiesForNextLap();
+                        lapStartTime = Date.now(); 
+                    } else {
+                        setTimeout(() => { finishGame(true); }, 200); 
+                        startFlashing();
+                    }
+                }
+            }
+        }
+
+        function startFlashing() {
+            gameState = 'FINISHED_FLASHING'; 
+            setTimeout(() => {
+                flashCount = 0;
+                flashIntervalId = setInterval(flashMaze, 300);
+            }, 1000); 
+        }
+
+        function flashMaze() {
+            flashCount++;
+            if (flashCount > FLASH_MAX) { 
+                clearInterval(flashIntervalId);
+                flashIntervalId = null;
+                currentMazeColor = TRACK_COLORS[currentTrackIndex]; 
+                
+                // 🚀 修正: 点滅終了後、finishGameは呼ばずに状態を復元
+                if (gameMode === 'SINGLE_RACE') {
+                    gameState = 'FINISHED_RESTART'; // 練習モード完了/中断後は常にこれ
+                } else if (gameMode === 'GRAND_PRIX_1P' || gameMode === 'GRAND_PRIX_2P') {
+                    // グランプリは finishGame で設定された状態 (TRACK_FINISHED_WAIT or GRAND_PRIX_WAIT or SHOWING_INTERIM_RESULTS) になる
+                     updateTimeAndLapDisplay(); 
+                }
+                return;
+            }
+            currentMazeColor = (flashCount % 2 === 1) ? TRACK_COLORS[currentTrackIndex] : '#FFFFFF';
+            // 描画は gameLoop で行われる
+        }
+        
+        function updateTimeAndLapDisplay() {
+            let bestTime = Infinity;
+            if (gameMode === 'SINGLE_RACE') {
+                bestTime = bestSingleRaceTimes[currentTrackIndex];
+            }
+            const bestTimeText = bestTime === Infinity ? 'BEST: --:--.---' : `BEST: ${formatTotalTime(bestTime)}`;
+            
+            if (currentPlayerDisplay) { 
+                if (gameMode === 'GRAND_PRIX_2P') {
+                     currentPlayerDisplay.textContent = `${grandPrixData[currentPlayer].name} (${TRACKS[currentTrackIndex].name}コース)`;
+                     currentPlayerDisplay.style.color = currentPlayer === 'player1' ? '#FFC000' : '#00AAFF';
+                } else if (gameMode === 'GRAND_PRIX_1P') {
+                     currentPlayerDisplay.textContent = `1Pモード走行中 (${TRACKS[currentTrackIndex].name}コース)`;
+                     currentPlayerDisplay.style.color = '#FFC000';
+                } else {
+                     currentPlayerDisplay.textContent = '';
+                }
+            }
+
+            if (gameState === 'RACE' || gameState === 'FREE_RUN') {
+                const currentTime = Date.now() - lapStartTime + lapTimes.reduce((a, b) => a + b, 0);
+                timeDisplay.textContent = `Time: ${formatTime(currentTime)}`;
+                if (currentBestTimeDisplay) { 
+                    currentBestTimeDisplay.textContent = (gameMode === 'SINGLE_RACE') ? bestTimeText : '';
+                    currentBestTimeDisplay.style.color = '#FFF'; 
+                }
+            } else if (gameState === 'FINISHED' || gameState === 'FINISHED_RESTART') { // 🚀 修正: FINISHED_RESTARTも考慮
+                 const totalTime = lapTimes.reduce((a, b) => a + b, 0);
+                 if (lapTimes.length === MAX_LAPS) { // 完走時
+                     timeDisplay.textContent = `TOTAL: ${formatTotalTime(totalTime)}`;
+                     if (currentBestTimeDisplay) { 
+                         if (gameMode === 'SINGLE_RACE') {
+                             currentBestTimeDisplay.textContent = bestTimeText;
+                             currentBestTimeDisplay.style.color = (totalTime < bestTime) ? '#00FF00' : '#FFD700'; 
+                         } else {
+                             currentBestTimeDisplay.textContent = `${grandPrixData[currentPlayer].name} FINISHED`;
+                             currentBestTimeDisplay.style.color = currentPlayer === 'player1' ? '#FFC000' : '#00AAFF';
+                         }
+                     }
+                 } else { // 中断時
+                     timeDisplay.textContent = `走行中断`;
+                     if (currentBestTimeDisplay) { 
+                        currentBestTimeDisplay.textContent = bestTimeText;
+                        currentBestTimeDisplay.style.color = '#FFD700';
+                     }
+                 }
+            } else if (gameState === 'TRACK_FINISHED_WAIT') { // この状態は通常使われなくなる
+                 const totalTime = lapTimes.reduce((a, b) => a + b, 0);
+                 timeDisplay.textContent = ` ${formatTotalTime(totalTime)}`;
+                 let nextPlayer = (gameMode === 'GRAND_PRIX_2P') ? (currentPlayer === 'player1' ? 'player2' : 'player1') : 'player1';
+                 let nextTrackIndex = currentTrackIndex;
+                 if (gameMode === 'GRAND_PRIX_2P' && nextPlayer === 'player1') nextTrackIndex = currentTrackIndex + 1;
+                 else if (gameMode === 'GRAND_PRIX_1P') nextTrackIndex = currentTrackIndex + 1;
+                 if (nextTrackIndex < TRACKS.length) {
+                      if (currentPlayerDisplay) { 
+                          currentPlayerDisplay.textContent = `${grandPrixData[nextPlayer].name}の番 (${TRACKS[nextTrackIndex].name}コース)`;
+                          currentPlayerDisplay.style.color = nextPlayer === 'player1' ? '#FFC000' : '#00AAFF';
+                      }
+                      if (currentBestTimeDisplay) currentBestTimeDisplay.textContent = `GO TO NEXT`;
+                 } else {
+                      if (currentPlayerDisplay) { 
+                          currentPlayerDisplay.textContent = `全コース終了`;
+                          currentPlayerDisplay.style.color = '#FFC000';
+                      }
+                      if (currentBestTimeDisplay) currentBestTimeDisplay.textContent = `結果を見る`;
+                 }
+                 if (currentBestTimeDisplay) currentBestTimeDisplay.style.color = '#FFC000'; 
+            } else if (gameState === 'GRAND_PRIX_WAIT') {
+                 timeDisplay.textContent = `全コース終了`;
+                 if (currentPlayerDisplay) { 
+                     currentPlayerDisplay.textContent = (gameMode === 'GRAND_PRIX_1P') ? `1P COMPLETE` : `2P COMPLETE`;
+                     currentPlayerDisplay.style.color = '#FFC000';
+                 }
+                 if (currentBestTimeDisplay) { 
+                     currentBestTimeDisplay.textContent = `COMPLETED`;
+                     currentBestTimeDisplay.style.color = '#FFC000';
+                 }
+            } else if (gameState === 'READY') {
+                 timeDisplay.textContent = 'READY';
+                 if (currentBestTimeDisplay) { 
+                    currentBestTimeDisplay.textContent = (gameMode === 'SINGLE_RACE') ? bestTimeText : '';
+                    currentBestTimeDisplay.style.color = '#FFD700';
+                 }
+                 if (currentPlayerDisplay) { 
+                    if (gameMode === 'GRAND_PRIX_2P') {
+                          currentPlayerDisplay.textContent = `${grandPrixData[currentPlayer].name}の番 (${TRACKS[currentTrackIndex].name}コース)`;
+                          currentPlayerDisplay.style.color = currentPlayer === 'player1' ? '#FFC000' : '#00AAFF';
+                    } else if (gameMode === 'GRAND_PRIX_1P') {
+                          currentPlayerDisplay.textContent = `1Pモード走行前 (${TRACKS[currentTrackIndex].name}コース)`;
+                          currentPlayerDisplay.style.color = '#FFC000';
+                    }
+                 }
+            } else if (gameState === 'COUNTDOWN') {
+                 if (currentBestTimeDisplay) { 
+                    currentBestTimeDisplay.textContent = (gameMode === 'SINGLE_RACE') ? bestTimeText : '';
+                    currentBestTimeDisplay.style.color = '#FFD700';
+                 }
+            } else if (gameState === 'FINISHED_FLASHING') {
+                const totalTime = lapTimes.reduce((a, b) => a + b, 0);
+                timeDisplay.textContent = `TOTAL: ${formatTotalTime(totalTime)}`;
+                if (currentBestTimeDisplay) { 
+                    if (gameMode === 'SINGLE_RACE') {
+                         currentBestTimeDisplay.textContent = bestTimeText;
+                         currentBestTimeDisplay.style.color = (totalTime < bestTime) ? '#00FF00' : '#FFD700';
+                    } else {
+                         currentBestTimeDisplay.textContent = `${grandPrixData[currentPlayer].name} FINISHED`;
+                         currentBestTimeDisplay.style.color = currentPlayer === 'player1' ? '#FFC000' : '#00AAFF';
+                    }
+                }
+                if (currentPlayerDisplay) { 
+                    if (gameMode === 'GRAND_PRIX_2P') {
+                          currentPlayerDisplay.textContent = `${grandPrixData[currentPlayer].name} (${TRACKS[currentTrackIndex].name}コース)`;
+                          currentPlayerDisplay.style.color = currentPlayer === 'player1' ? '#FFC000' : '#00AAFF';
+                    } else if (gameMode === 'GRAND_PRIX_1P') {
+                          currentPlayerDisplay.textContent = `1Pモード走行中 (${TRACKS[currentTrackIndex].name}コース)`;
+                          currentPlayerDisplay.style.color = '#FFC000';
+                    }
+                }
+            }
+        }
+        
+        function saveBestTimes() {
+            localStorage.setItem(`bestTimeTrack${currentTrackIndex}`, bestSingleRaceTimes[currentTrackIndex]);
+        }
+        
+        function updateMenuBestTimes() {
+            const displayElement = document.getElementById(`bestTimeTrack${currentTrackIndex}`);
+            if (displayElement) {
+                displayElement.textContent = 
+                    bestSingleRaceTimes[currentTrackIndex] === Infinity ? 'Best: --:--.---' : `Best: ${formatTotalTime(bestSingleRaceTimes[currentTrackIndex])}`;
+            }
+        }
+
+        /**
+         * 🚀 修正: ゲーム終了処理 (グランプリ途中結果表示を追加)
+         * @param {boolean} completed - 全ラップを完了したかどうか
+         */
+        function finishGame(completed) {
+            const totalTime = lapTimes.reduce((a, b) => a + b, 0); 
+
+            if (gameMode === 'SINGLE_RACE') {
+                gameState = 'FINISHED_RESTART'; 
+                if (completed && totalTime < bestSingleRaceTimes[currentTrackIndex]) {
+                    bestSingleRaceTimes[currentTrackIndex] = totalTime;
+                    saveBestTimes(); 
+                    updateMenuBestTimes(); 
+                }
+                startButton.textContent = 'RESTART'; 
+                startButton.classList.remove('race-mode', 'race-mode-2p', 'track1-color', 'track2-color', 'track3-color', 'track4-color');
+                startButton.disabled = false;
+                
+            } else if ((gameMode === 'GRAND_PRIX_1P' || gameMode === 'GRAND_PRIX_2P') && completed) {
+                const resultsArray = grandPrixData[currentPlayer].results;
+                const existingResult = resultsArray.find(r => r.trackIndex === currentTrackIndex && r.player === currentPlayer); 
+                if (!existingResult) { 
+                    resultsArray.push({ trackIndex: currentTrackIndex, trackName: TRACKS[currentTrackIndex].name, time: totalTime, player: currentPlayer });
+                }
+                
+                let nextPlayer = currentPlayer;
+                let nextTrackIndex = currentTrackIndex;
+                let grandPrixFinished = false;
+                if (gameMode === 'GRAND_PRIX_2P') {
+                    nextPlayer = currentPlayer === 'player1' ? 'player2' : 'player1';
+                    if (nextPlayer === 'player1') nextTrackIndex = currentTrackIndex + 1;
+                    if (nextTrackIndex >= TRACKS.length) grandPrixFinished = true;
+                } else { // 1P
+                    nextTrackIndex = currentTrackIndex + 1;
+                    if (nextTrackIndex >= TRACKS.length) grandPrixFinished = true;
+                }
+                
+                if (!grandPrixFinished) {
+                    nextTrackForGP = nextTrackIndex; 
+                    nextPlayerForGP = nextPlayer;
+                    gameState = 'SHOWING_INTERIM_RESULTS'; 
+                    showGrandPrixResults(true); 
+                    startButton.disabled = true; 
+                } else {
+                    gameState = 'GRAND_PRIX_WAIT';
+                    startButton.textContent = '総合結果を見る';
+                    startButton.disabled = false; 
+                    startButton.classList.remove('track1-color', 'track2-color', 'track3-color', 'track4-color');
+                    if (gameMode === 'GRAND_PRIX_1P') startButton.classList.add('race-mode');
+                    else startButton.classList.add('race-mode-2p');
+                }
+            }
+        }
+
+        /**
+         * 🚀 修正: グランプリ結果表示 (途中結果対応)
+         * @param {boolean} isInterim - 途中結果かどうか
+         */
+        function showGrandPrixResults(isInterim = false) {
+            if (!grandPrixResultsDiv) return; 
+            grandPrixResultsDiv.style.display = 'block';
+            gameUI.style.display = 'none';
+            grandPrixScoreList.innerHTML = '';
+            grandPrixTotalTime.innerHTML = '';
+            
+            let totalTimeMs1P = 0;
+            let totalTimeMs2P = 0;
+            
+            let resultHTML = isInterim ? '<h3>途中経過</h3>' : '<h3>最終結果</h3>';
+            
+            for(let i = 0; i < TRACKS.length; i++) {
+                 const p1ResultForTrack = grandPrixData.player1.results.find(r => r.trackIndex === i);
+                 const p2ResultForTrack = grandPrixData.player2.results.find(r => r.trackIndex === i);
+                 if (isInterim && i > currentTrackIndex && !(gameMode === 'GRAND_PRIX_2P' && currentPlayer === 'player1' && i === currentTrackIndex)) continue; 
+
+                 const trackName = TRACKS[i].name;
+                 resultHTML += `<h4 style="color: ${TRACK_COLORS[i]}; margin-top: 10px; margin-bottom: 5px;">${trackName}コース</h4>`;
+                 
+                 const time1P = p1ResultForTrack ? formatTotalTime(p1ResultForTrack.time) : '--:--.---';
+                 if (p1ResultForTrack) totalTimeMs1P += p1ResultForTrack.time;
+                 
+                 if (gameMode === 'GRAND_PRIX_2P') {
+                      const time2P = p2ResultForTrack ? formatTotalTime(p2ResultForTrack.time) : '--:--.---';
+                      if (p2ResultForTrack) totalTimeMs2P += p2ResultForTrack.time;
+                      let class1P = '', class2P = '';
+                       if (p1ResultForTrack && p2ResultForTrack) {
+                           if (p1ResultForTrack.time < p2ResultForTrack.time) class1P = 'style="color: lime;"';
+                           else if (p2ResultForTrack.time < p1ResultForTrack.time) class2P = 'style="color: lime;"';
+                       }
+                      resultHTML += `<p style="font-size: 16px; margin: 2px 0;"><span style="color: #FFC000;">P1:</span> <span ${class1P}>${time1P}</span></p>`;
+                      resultHTML += `<p style="font-size: 16px; margin: 2px 0;"><span style="color: #00AAFF;">P2:</span> <span ${class2P}>${time2P}</span></p>`;
+                 } else { // 1P
+                      resultHTML += `<p style="font-size: 16px; margin: 2px 0;">Time: ${time1P}</p>`;
+                 }
+            }
+            grandPrixScoreList.innerHTML = resultHTML;
+
+            grandPrixTotalTime.innerHTML += '<hr style="border-top: 1px solid #777; width: 90%; margin-top: 15px;">';
+            if (gameMode === 'GRAND_PRIX_2P') {
+                 grandPrixTotalTime.innerHTML += `<p style="font-size: 18px; color: #FFC000; margin-bottom: 5px;">P1 Total: ${formatTotalTime(totalTimeMs1P)}</p>`;
+                 grandPrixTotalTime.innerHTML += `<p style="font-size: 18px; color: #00AAFF;">P2 Total: ${formatTotalTime(totalTimeMs2P)}</p>`;
+                 if (!isInterim) {
+                    let winnerText = '';
+                    let totalTime = Math.min(totalTimeMs1P, totalTimeMs2P);
+                    if (totalTimeMs1P < totalTimeMs2P) winnerText = `🏆 勝者: PLAYER 1 (差: ${formatTotalTime(totalTimeMs2P - totalTimeMs1P)})`;
+                    else if (totalTimeMs2P < totalTimeMs1P) winnerText = `🏆 勝者: PLAYER 2 (差: ${formatTotalTime(totalTimeMs1P - totalTimeMs2P)})`;
+                    else winnerText = `引き分け！`;
+                    grandPrixTotalTime.innerHTML += `<p style="color: lime; font-weight: bold; margin-top: 10px;">${winnerText}</p>`;
+                    if (totalTime < bestGrandPrixTime2P) {
+                        bestGrandPrixTime2P = totalTime;
+                        localStorage.setItem('bestGrandPrixTime2P', totalTime);
+                        grandPrixTotalTime.innerHTML += ' (NEW BEST!)';
+                    }
+                 }
+            } else { // 1P
+                 grandPrixTotalTime.innerHTML += `<p style="font-size: 18px;">Total: ${formatTotalTime(totalTimeMs1P)}</p>`;
+                 if (!isInterim) { 
+                     if (totalTimeMs1P < bestGrandPrixTime1P) {
+                         bestGrandPrixTime1P = totalTimeMs1P;
+                         localStorage.setItem('bestGrandPrixTime1P', totalTimeMs1P);
+                         grandPrixTotalTime.innerHTML += '<span style="color: lime;"> (NEW BEST!)</span>';
+                     }
+                 }
+            }
+
+            const oldButton = document.getElementById('resultButton');
+            const newButton = oldButton.cloneNode(true);
+            oldButton.parentNode.replaceChild(newButton, oldButton);
+            const finalButton = document.getElementById('resultButton'); 
+
+            if (isInterim) {
+                finalButton.textContent = '次のレースへ進む';
+                finalButton.style.backgroundColor = '#4CAF50'; 
+                finalButton.addEventListener('click', continueGrandPrix); 
+            } else {
+                finalButton.textContent = 'メニューに戻る';
+                finalButton.style.backgroundColor = ''; 
+                finalButton.addEventListener('click', showMenu); 
+            }
+        }
+        
+        function continueGrandPrix() {
+            if (grandPrixResultsDiv) grandPrixResultsDiv.style.display = 'none';
+            initializeGame(gameMode, nextTrackForGP, nextPlayerForGP);
+        }
+        
+        function finishGrandPrix() {
+             gameState = 'GRAND_PRIX_RESULTS';
+             showGrandPrixResults(false); 
+        }
+
+
+        function showMenu() {
+            gameState = 'MENU';
+            startMenu.style.display = 'block';
+            grandPrixResultsDiv.style.display = 'none';
+            gameUI.style.display = 'none';
+            
+            loadBestTimes();
+            
+            bestGrandPrixTimeDisplay1P.textContent = 
+                bestGrandPrixTime1P === Infinity ? 'Best: --:--.---' : `Best: ${formatTotalTime(bestGrandPrixTime1P)}`;
+            bestGrandPrixTimeDisplay2P.textContent = 
+                bestGrandPrixTime2P === Infinity ? 'Best: --:--.---' : `Best: ${formatTotalTime(bestGrandPrixTime2P)}`;
+
+            for (let i = 0; i < TRACKS.length; i++) {
+                const displayElement = document.getElementById(`bestTimeTrack${i}`);
+                if (displayElement) {
+                     displayElement.textContent = 
+                        bestSingleRaceTimes[i] === Infinity ? 'Best: --:--.---' : `Best: ${formatTotalTime(bestSingleRaceTimes[i])}`;
+                }
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        function loadBestTimes() {
+             const bestGrandPrix1P = localStorage.getItem('bestGrandPrixTime1P');
+             bestGrandPrixTime1P = bestGrandPrix1P ? parseInt(bestGrandPrix1P) : Infinity;
+             const bestGrandPrix2P = localStorage.getItem('bestGrandPrixTime2P');
+             bestGrandPrixTime2P = bestGrandPrix2P ? parseInt(bestGrandPrix2P) : Infinity;
+             for (let i = 0; i < TRACKS.length; i++) {
+                 const bestSingle = localStorage.getItem(`bestTimeTrack${i}`);
+                 bestSingleRaceTimes[i] = bestSingle ? parseInt(bestSingle) : Infinity;
+             }
+        }
+
+
+        // ... (イベントハンドラ: handlePointerDown, handlePointerUp, handleKeyDown, handleKeyUp) ...
+        function handlePointerDown(e) { e.preventDefault(); if (gameState !== 'FREE_RUN' && gameState !== 'RACE') return; const rect = canvas.getBoundingClientRect(); const touchX = (e.clientX || e.touches[0].clientX) - rect.left; const touchY = (e.clientY || e.touches[0].clientY) - rect.top; const dx = touchX - pacman.x; const dy = touchY - pacman.y; let moveDx = 0; let moveDy = 0; if (Math.abs(dx) > Math.abs(dy)) { moveDx = dx > 0 ? 1 : -1; } else { moveDy = dy > 0 ? 1 : -1; } attemptMove(moveDx, moveDy); }
+        function handlePointerUp(e) { e.preventDefault(); }
+        function handleKeyDown(e) { if (gameState !== 'FREE_RUN' && gameState !== 'RACE') return; let moveDx = 0; let moveDy = 0; switch(e.key) { case 'ArrowUp': case 'w': moveDy = -1; break; case 'ArrowDown': case 's': moveDy = 1; break; case 'ArrowLeft': case 'a': moveDx = -1; break; case 'ArrowRight': case 'd': moveDx = 1; break; } if (moveDx !== 0 || moveDy !== 0) { attemptMove(moveDx, moveDy); e.preventDefault(); } }
+        function handleKeyUp(e) { /* No action */ }
+        
+        canvas.addEventListener('mousedown', handlePointerDown);
+        canvas.addEventListener('touchstart', handlePointerDown);
+        canvas.addEventListener('mouseup', handlePointerUp);
+        canvas.addEventListener('touchend', handlePointerUp);
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        let gameLoopRunning = false; 
+        function gameLoop(timestamp) {
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawMaze();
+            drawCookies(); // 🚀 ドットを描画
+
+            if (gameState === 'RACE' || gameState === 'FREE_RUN' || gameState === 'FINISHED_FLASHING') {
+                updatePacman();
+            } 
+            if (gameState !== 'FINISHED_FLASHING' || (flashCount % 2 === 1)) { 
+                drawPacman(); 
+            }
+            
+            updateTimeAndLapDisplay();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+
+        // --- イベントリスナー ---
+        
+        grandPrixButton1P.addEventListener('click', () => {
+            grandPrixData.player1.results = []; 
+            grandPrixData.player2.results = []; 
+            initializeGame('GRAND_PRIX_1P', 0, 'player1'); 
+        });
+        
+        grandPrixButton2P.addEventListener('click', () => {
+            grandPrixData.player1.results = []; 
+            grandPrixData.player2.results = []; 
+            initializeGame('GRAND_PRIX_2P', 0, 'player1'); 
+        });
+
+        document.querySelectorAll('#track-grid .mode-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const targetButton = e.target.closest('.mode-button');
+                const trackIndex = parseInt(targetButton.dataset.trackIndex);
+                initializeGame('SINGLE_RACE', trackIndex); 
+            });
+        });
+
+        // 🚀 resultButtonのリスナーは showGrandPrixResults で動的に設定される
+
+        document.getElementById('returnToMenuButtonGame').addEventListener('click', () => {
+            if (gameState === 'COUNTDOWN') {
+                clearInterval(countdownTimer);
+                countdownDisplay.textContent = '';
+            }
+            showMenu();
+        });
+
+
+        /**
+         * 🚀 修正: startButton イベントリスナー
+         */
+        startButton.addEventListener('click', () => {
+            if (gameState === 'READY') {
+                if (gameMode === 'SINGLE_RACE' || gameMode === 'GRAND_PRIX_1P' || gameMode === 'GRAND_PRIX_2P') {
+                    startCountdown();
+                }
+            } else if (gameState === 'FREE_RUN') {
+                finishGame(false); // 中断処理へ
+            } else if (gameState === 'FINISHED') {
+                // グランプリ完了時のみメニューに戻る (SINGLE_RACEはFINISHED_RESTARTで処理)
+                if (gameMode !== 'SINGLE_RACE') {
+                     showMenu();
+                }
+            } else if (gameState === 'FINISHED_RESTART') { // 練習走行の中断後 または 完了後
+                initializeGame('SINGLE_RACE', currentTrackIndex); // RESTART
+            } else if (gameState === 'TRACK_FINISHED_WAIT') { 
+                console.warn("Unexpected state: TRACK_FINISHED_WAIT reached via startButton");
+                 let nextTrackIndex = currentTrackIndex;
+                 let nextPlayer = currentPlayer;
+                 if (gameMode === 'GRAND_PRIX_2P') {
+                     nextPlayer = currentPlayer === 'player1' ? 'player2' : 'player1';
+                     if (nextPlayer === 'player1') nextTrackIndex = currentTrackIndex + 1; 
+                 } else { 
+                     nextTrackIndex = currentTrackIndex + 1;
+                     nextPlayer = 'player1'; 
+                 }
+                 initializeGame(gameMode, nextTrackIndex, nextPlayer);
+            } else if (gameState === 'GRAND_PRIX_WAIT') { 
+                finishGrandPrix(); // 最終結果画面へ移行
+            }
+            // 🚀 SHOWING_INTERIM_RESULTS 状態では startButton は無効化されているはず
+        });
+
+
+        // ゲーム開始時の初期化
+        showMenu(); 
+    </script>
+
+</body>
+</html>
+</body>
+</html>
