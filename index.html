@@ -463,6 +463,9 @@ PAC-MAN × RACE × PUZZLE<BR>
         // 🚀 追加: ジャイロ操作用状態変数
         let isGyroControlActive = false;
         let controlMode = 'SWIPE'; // SWIPE, GYRO, KEYBOARD のいずれか
+	let inputDirection = { x: 0, y: 0 };
+	// ジャイロ感度 (0.0〜1.0程度で調整し、操作性を決定します)
+	const GYRO_SENSITIVITY = 0.8;
 
         let MAP = [];
         let MAP_WIDTH = 0;
@@ -481,6 +484,8 @@ PAC-MAN × RACE × PUZZLE<BR>
         let pacman = {
             x: 0, y: 0, dx: 0, dy: 0, nextDx: 0, nextDy: 0,
             isBoosting: false, boostEndTime: 0, turnAttemptTime: 0, stoppedTime: 0      
+		// 左右・前後入力の現在の値
+	
         };
         
         // 🚀 追加: グランプリ途中結果表示用の一時変数
@@ -1333,32 +1338,39 @@ PAC-MAN × RACE × PUZZLE<BR>
          * 🚀 追加: デバイスの傾きイベントを処理する関数
          * @param {DeviceOrientationEvent} event 
          */
-        function handleDeviceOrientation(event) {
-            if (!isGyroControlActive || (gameState !== 'FREE_RUN' && gameState !== 'RACE')) return;
+function handleDeviceOrientation(event) {
+    // ゲームがプレイ中かつジャイロ操作が有効な場合のみ処理
+    if (!isGyroControlActive || gameState !== 'PLAYING') return;
 
-            const gamma = event.gamma; // 左右: -90 ~ 90
-            const beta = event.beta;   // 前後: -180 ~ 180 (0で水平)
+    // beta: X軸周りの回転（前後の傾き） -90〜90度（水平時0度）
+    // gamma: Y軸周りの回転（左右の傾き） -90〜90度（水平時0度）
+    
+    const beta = event.beta;
+    const gamma = event.gamma;
 
-            let moveDx = 0;
-            let moveDy = 0;
-            
-            // 左右
-            if (gamma > TILT_THRESHOLD) moveDx = 1; 
-            else if (gamma < -TILT_THRESHOLD) moveDx = -1; 
+    let inputX = 0; // 左右入力
+    let inputY = 0; // 上下入力
 
-            // 前後 (垂直持ちを基準)
-            const verticalHoldAngle = 90; 
-            const adjustedBeta = beta - verticalHoldAngle; 
-            if (adjustedBeta < -TILT_THRESHOLD * 1.5) moveDy = -1; // 上 (手前に大きく傾ける)
-            else if (adjustedBeta > TILT_THRESHOLD * 1.5) moveDy = 1; // 下 (奥に大きく傾ける)
-            
-            // 優先方向決定と移動
-            if (moveDx !== 0 || moveDy !== 0) {
-                 if (Math.abs(gamma) > Math.abs(adjustedBeta)) attemptMove(moveDx, 0); 
-                 else attemptMove(0, moveDy); 
-            }
-        }
+    // 1. 左右の入力 (X軸 - ステアリング)
+    // ユーザー要望: 右を下に傾ける (gamma > 0) -> 右入力（正）
+    //               左を下に傾ける (gamma < 0) -> 左入力（負）
+    // gammaを90度で正規化し、感度を適用
+    inputX = (gamma / 90.0) * GYRO_SENSITIVITY;
 
+    // 2. 前後の入力 (Y軸 - アクセル/ブレーキなど)
+    // ユーザー要望: 上部を下に傾ける (beta > 0) -> 上方向入力（正）
+    //               下部を下に傾ける (beta < 0) -> 下方向入力（負）
+    // betaを90度で正規化し、感度を適用
+    inputY = (beta / 90.0) * GYRO_SENSITIVITY;
+
+    // 入力値のクランプ（-1.0〜1.0に制限）
+    // これにより、感度設定に関わらず、最大入力が1.0に制限されます
+    inputDirection.x = Math.max(-1.0, Math.min(1.0, inputX));
+    inputDirection.y = Math.max(-1.0, Math.min(1.0, inputY));
+    
+    // デバッグログ (オプション)
+    // console.log(`Gyro X: ${inputDirection.x.toFixed(2)}, Y: ${inputDirection.y.toFixed(2)}`);
+}
 
         function handleKeyDown(e) { 
              if (isGyroControlActive) return; // 🚀 ジャイロ中はスキップ
