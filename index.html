@@ -1567,7 +1567,7 @@ function handleDeviceMotion(event) {
                     if (permissionState === 'granted') {
                         window.addEventListener('devicemotion', handleDeviceMotion);
                         setControlMode('ACCELEROMETER'); // 制御モードをACCELEROMETERに設定
-                        gyroControlButton.textContent = '✅水平から傾けて操作(解除)';
+                        gyroControlButton.textContent = '✅スワイプ操作に切り替え';
                         gyroControlButton.style.backgroundColor = '#4CAF50';
                     } else {
                         alert('加速度センサーのアクセスが拒否されました。');
