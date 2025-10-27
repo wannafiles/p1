@@ -1548,54 +1548,52 @@ function handleDeviceMotion(event) {
             // 🚀 SHOWING_INTERIM_RESULTS 状態では startButton は無効化されているはず
         });
         
-        // 🚀 追加: ジャイロ操作有効化ボタンの処理
-        const gyroControlButton = document.getElementById('gyroControlButton');
-
-        function requestDeviceOrientationPermission() {
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission()
-                    .then(permissionState => {
-                        if (permissionState === 'granted') {
-                            window.addEventListener('devicemotion', handleDeviceOrientation);
-                            setControlMode('GYRO');
-                            gyroControlButton.textContent = '✅ ジャイロ操作が有効です (クリックで解除)';
-                            gyroControlButton.style.backgroundColor = '#4CAF50';
-                        } else {
-                            alert('ジャイロセンサーの使用が許可されませんでした。');
-                        }
-                    })
-                    .catch(error => {
-                         console.error("ジャイロ許可エラー:", error);
-                         alert('ジャイロセンサーの有効化中にエラーが発生しました。');
-                    });
+// 加速度センサー (DeviceMotionEvent) の有効化をリクエストする
+        function requestDeviceMotionPermission() {
+            // iOS 13以降で許可が必要な場合
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission().then(permissionState => {
+                    if (permissionState === 'granted') {
+                        window.addEventListener('devicemotion', handleDeviceMotion);
+                        setControlMode('ACCELEROMETER'); // 制御モードをACCELEROMETERに設定
+                        gyroControlButton.textContent = '✅ 振る操作が有効です (クリックで解除)';
+                        gyroControlButton.style.backgroundColor = '#4CAF50';
+                    } else {
+                        alert('加速度センサーのアクセスが拒否されました。');
+                    }
+                })
+                .catch(error => {
+                     console.error("加速度センサー許可エラー:", error);
+                     alert('加速度センサーの有効化中にエラーが発生しました。'); // ← これでエラー内容が正確になる
+                });
             } else {
                 // iOS 13未満やAndroidなど、許可が不要な環境
-                if ('DeviceOrientationEvent' in window) {
-                    window.addEventListener('devicemotion', handleDeviceOrientation);
-                    setControlMode('GYRO');
-                    gyroControlButton.textContent = '✅ ジャイロ操作が有効です (クリックで解除)';
+                if ('DeviceMotionEvent' in window) {
+                    window.addEventListener('devicemotion', handleDeviceMotion);
+                    setControlMode('ACCELEROMETER'); // 制御モードをACCELEROMETERに設定
+                    gyroControlButton.textContent = '✅ 振る操作が有効です (クリックで解除)';
                     gyroControlButton.style.backgroundColor = '#4CAF50';
                 } else {
-                    alert('お使いのデバイスまたはブラウザはジャイロ操作に対応していません。');
+                    alert('お使いのデバイスまたはブラウザは加速度センサーに対応していません。');
                 }
             }
         }
 
         if (gyroControlButton) {
              gyroControlButton.addEventListener('click', () => {
-                 if (isGyroControlActive) {
+                 // isGyroControlActive ではなく、現在のモードで判断する方が安全
+                 if (currentControlMode === 'ACCELEROMETER') {
                      // 解除
-                     window.removeEventListener('devicemotion', handleDeviceOrientation);
+                     window.removeEventListener('devicemotion', handleDeviceMotion);
                      setControlMode('SWIPE'); 
-                     gyroControlButton.textContent = '▶ ジャイロ操作を有効化';
+                     gyroControlButton.textContent = '▶ 振る操作を有効化';
                      gyroControlButton.style.backgroundColor = '#FF9800'; 
                  } else {
                      // 有効化
-                     requestDeviceOrientationPermission();
+                     requestDeviceMotionPermission(); // 変更後の関数を呼び出し
                  }
              });
         }
-
 
         // ゲーム開始時の初期化
         showMenu(); 
