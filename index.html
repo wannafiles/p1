@@ -1327,11 +1327,15 @@ let inputDirection = { x: 0, y: 0 };
         }
 
         // 🚀 追加: 制御モード切り替え関数
+// 🚀 追加: 制御モード切り替え関数
         function setControlMode(mode) {
              controlMode = mode;
-             isGyroControlActive = (mode === 'GYRO');
+             // ▼▼▼▼▼ 修正点 1 ▼▼▼▼▼
+             isGyroControlActive = (mode === 'GYRO' || mode === 'ACCELEROMETER');
+             // ▲▲▲▲▲ 修正点 1 ▲▲▲▲▲
+
              // 他のイベントリスナーの状態を調整
-             if (mode === 'GYRO') {
+             if (isGyroControlActive) { // (isGyroControlActive を参照するように修正)
                  // ジャイロ有効時はタッチ・キーボードを無効化
                  canvas.removeEventListener('mousedown', handlePointerDown);
                  canvas.removeEventListener('touchstart', handlePointerDown);
@@ -1347,6 +1351,7 @@ let inputDirection = { x: 0, y: 0 };
                  window.addEventListener('keydown', handleKeyDown);
              }
         }
+
 
         // 🚀 修正・追加されたイベントハンドラ
         
@@ -1579,10 +1584,12 @@ function handleDeviceMotion(event) {
             }
         }
 
-        if (gyroControlButton) {
+if (gyroControlButton) {
              gyroControlButton.addEventListener('click', () => {
-                 // isGyroControlActive ではなく、現在のモードで判断する方が安全
-                 if (currentControlMode === 'ACCELEROMETER') {
+                 // ▼▼▼▼▼ 修正点 2 ▼▼▼▼▼
+                 if (controlMode === 'ACCELEROMETER') {
+                 // ▲▲▲▲▲ 修正点 2 ▲▲▲▲▲
+                 
                      // 解除
                      window.removeEventListener('devicemotion', handleDeviceMotion);
                      setControlMode('SWIPE'); 
