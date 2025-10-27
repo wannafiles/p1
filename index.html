@@ -422,7 +422,7 @@ PAC-MAN × RACE × PUZZLE<BR>
 	// 加速度センサー操作のための閾値 (m/s^2)
 	// この値は、テストプレイを通じて調整が必要です
 	const ACCEL_THRESHOLD = 5.0;
-	const ROTATION_THRESHOLD = 200;
+	const ROTATION_THRESHOLD = 100;
 
         const TRACK_COLORS = [
             '#FF4444', // Maze 1 (赤色ベース)
@@ -1420,11 +1420,11 @@ function handleDeviceMotion(event) {
                 
                 // rate.alpha > 0: 奥に傾けた (上側が下に)
                 if (rate.alpha > 0) {
-                    moveDy = -1; // 上
+                    moveDy = 1; // 上
                 } 
                 // rate.alpha < 0: 手前に傾けた (下側が下に)
                 else {
-                    moveDy = 1; // 下
+                    moveDy = -1; // 下
                 }
             } 
             // Y軸 (左/右) の回転が最も大きい場合
