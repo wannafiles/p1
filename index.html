@@ -325,9 +325,8 @@ PAC-MAN × RACE × PUZZLE<BR>
                 </button>
             </div>
             <hr style="border-top: 1px solid #777; width: 90%;">
-
             <button id="gyroControlButton" class="mode-button" style="margin-top: 15px; background-color: #FF9800;">
-                <span style="color: yellow;">▶</span> ジャイロ操作を有効化
+                <span style="color: yellow;">▶</span>傾け操作に切り替え
             </button>
             
         </div>
@@ -1305,10 +1304,10 @@ let inputDirection = { x: 0, y: 0 };
              const gyroButton = document.getElementById('gyroControlButton');
              if (gyroButton) {
                  if (isGyroControlActive) {
-                    gyroButton.textContent = '✅ ジャイロ操作が有効です (クリックで解除)';
+                    gyroButton.textContent = '✅水平から傾けて移動 (クリック解除)';
                     gyroButton.style.backgroundColor = '#4CAF50';
                  } else {
-                    gyroButton.textContent = '▶ ジャイロ操作を有効化';
+                    gyroButton.textContent = '▶傾け操作に切り替え';
                     gyroButton.style.backgroundColor = '#FF9800'; 
                  }
             }
@@ -1568,7 +1567,7 @@ function handleDeviceMotion(event) {
                     if (permissionState === 'granted') {
                         window.addEventListener('devicemotion', handleDeviceMotion);
                         setControlMode('ACCELEROMETER'); // 制御モードをACCELEROMETERに設定
-                        gyroControlButton.textContent = '✅ 振る操作が有効です (クリックで解除)';
+                        gyroControlButton.textContent = '✅水平から傾けて操作(解除)';
                         gyroControlButton.style.backgroundColor = '#4CAF50';
                     } else {
                         alert('加速度センサーのアクセスが拒否されました。');
@@ -1583,7 +1582,7 @@ function handleDeviceMotion(event) {
                 if ('DeviceMotionEvent' in window) {
                     window.addEventListener('devicemotion', handleDeviceMotion);
                     setControlMode('ACCELEROMETER'); // 制御モードをACCELEROMETERに設定
-                    gyroControlButton.textContent = '✅ 振る操作が有効です (クリックで解除)';
+                    gyroControlButton.textContent = '✅スワイプ操作に切り替え';
                     gyroControlButton.style.backgroundColor = '#4CAF50';
                 } else {
                     alert('お使いのデバイスまたはブラウザは加速度センサーに対応していません。');
@@ -1600,7 +1599,7 @@ if (gyroControlButton) {
                      // 解除
                      window.removeEventListener('devicemotion', handleDeviceMotion);
                      setControlMode('SWIPE'); 
-                     gyroControlButton.textContent = '▶ 振る操作を有効化';
+                     gyroControlButton.textContent = '▶傾け操作に切り替え';
                      gyroControlButton.style.backgroundColor = '#FF9800'; 
                  } else {
                      // 有効化
