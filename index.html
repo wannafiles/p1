@@ -1398,50 +1398,67 @@ let inputDirection = { x: 0, y: 0 };
          * @param {DeviceOrientationEvent} event 
          */
 function handleDeviceMotion(event) {
-    // ゲームの状態が操作可能でなければ、何もしない
-    if (!isGyroControlActive || (gameState !== 'FREE_RUN' && gameState !== 'RACE')) return;
+            // ゲームの状態が操作可能でなければ、何もしない
+            if (!isGyroControlActive || (gameState !== 'FREE_RUN' && gameState !== 'RACE')) return;
 
-    // ユーザーが加えた加速度データ
-    const accel = event.acceleration; 
-    if (!accel || (accel.x === null && accel.y === null)) return; // データがない場合は処理を中断
+            // ユーザーが加えた加速度データ
+            const accel = event.acceleration; 
+            
+            // ▼▼▼▼▼ 修正点 1 (Y軸 -> Z軸) ▼▼▼▼▼
+            // Yの代わりにZのデータがあるかチェック
+            if (!accel || (accel.x === null && accel.z === null)) return; 
+            // ▲▲▲▲▲ 修正点 1 ▲▲▲▲▲
 
-    // 加速度の絶対値が最も大きい方向を検出
-    const absX = Math.abs(accel.x);
-    const absY = Math.abs(accel.y);
+            // 加速度の絶対値が最も大きい方向を検出
+            const absX = Math.abs(accel.x);
+            // const absY = Math.abs(accel.y); // Y軸は使用しない
+            
+            // ▼▼▼▼▼ 修正点 2 (Y軸 -> Z軸) ▼▼▼▼▼
+            const absZ = Math.abs(accel.z); // Z軸の絶対値を取得
+            // ▲▲▲▲▲ 修正点 2 ▲▲▲▲▲
 
-    let moveDx = 0;
-    let moveDy = 0;
+            let moveDx = 0;
+            let moveDy = 0;
 
-    // Y軸（前後）の加速度が最も大きく、閾値を超えている場合
-    if (absY > absX && absY > ACCEL_THRESHOLD) {
-        // Y軸加速度が負（前方に振った） -> 上移動
-        if (accel.y < 0) {
-            moveDy = -1; 
-        } 
-        // Y軸加速度が正（後方に振った） -> 下移動
-        else {
-            moveDy = 1; 
-        }
-    } 
-    // X軸（左右）の加速度が最も大きく、閾値を超えている場合
-    else if (absX > absY && absX > ACCEL_THRESHOLD) {
-        // X軸加速度が正（右に振った） -> 右移動
-        if (accel.x > 0) {
-            moveDx = 1; 
-        } 
-        // X軸加速度が負（左に振った） -> 左移動
-        else {
-            moveDx = -1; 
-        }
-    }
+            // ▼▼▼▼▼ 修正点 3 (Y軸 -> Z軸) ▼▼▼▼▼
+            // Z軸（奥/手前）の加速度が最も大きく、閾値を超えている場合
+            if (absZ > absX && absZ > ACCEL_THRESHOLD) {
+                // Z軸加速度が負（奥に振った） -> 上移動
+                // ※奥に振ると、端末は手前に加速(Z+)、または奥に減速(Z-)します。
+                //   端末によってZ軸の向きが異なる場合があるため、
+                //   もし動きが逆なら (accel.z > 0) に変更してください。
+                if (accel.z < 0) { 
+                    moveDy = -1; // 上
+                } 
+                // Z軸加速度が正（手前に振った） -> 下移動
+                else {
+                    moveDy = 1; // 下
+                }
+            } 
+            // ▲▲▲▲▲ 修正点 3 ▲▲▲▲▲
+            
+            // ▼▼▼▼▼ 修正点 4 (Y軸 -> Z軸) ▼▼▼▼▼
+            // X軸（左右）の加速度が最も大きく、閾値を超えている場合
+            // 比較対象を absY から absZ に変更
+            else if (absX > absZ && absX > ACCEL_THRESHOLD) {
+            // ▲▲▲▲▲ 修正点 4 ▲▲▲▲▲
+            
+                // X軸加速度が正（右に振った） -> 右移動
+                if (accel.x > 0) {
+                    moveDx = 1; 
+                } 
+                // X軸加速度が負（左に振った） -> 左移動
+                else {
+                    moveDx = -1; 
+                }
+            }
 
-    // 移動方向が決定された場合、次の移動を試みる
-    if (moveDx !== 0 || moveDy !== 0) {
-        // XとYの加速度が同時に閾値を超えた場合、絶対値が大きい方を優先する
-        attemptMove(moveDx, moveDy);
-    }
-}
-        function handleKeyDown(e) { 
+            // 移動方向が決定された場合、次の移動を試みる
+            if (moveDx !== 0 || moveDy !== 0) {
+                // XとZの加速度が同時に閾値を超えた場合、絶対値が大きい方を優先する
+                attemptMove(moveDx, moveDy);
+            }
+        }        function handleKeyDown(e) { 
              if (isGyroControlActive) return; // 🚀 ジャイロ中はスキップ
              if (gameState !== 'FREE_RUN' && gameState !== 'RACE') return; 
              let moveDx = 0, moveDy = 0; 
