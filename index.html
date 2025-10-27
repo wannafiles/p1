@@ -419,6 +419,10 @@ PAC-MAN × RACE × PUZZLE<BR>
         // 🚀 追加: ジャイロ操作用定数
         const TILT_THRESHOLD = 5; // 移動を開始する傾きの最小角度（度）
 
+	// 加速度センサー操作のための閾値 (m/s^2)
+	// この値は、テストプレイを通じて調整が必要です
+	const ACCEL_THRESHOLD = 5.0;
+
         const TRACK_COLORS = [
             '#FF4444', // Maze 1 (赤色ベース)
             '#44FFFF', // Maze 2 (水色ベース)
@@ -427,11 +431,63 @@ PAC-MAN × RACE × PUZZLE<BR>
         ];
 
         const TRACKS = [
-            { name: "RED", map: ["MMMMMMMMM", "M...M...M", "M.M.M.M.M", "M.......M", "M.M.M.MMM", "....M....", "MMM.M.M.M", "M...P...M", "M.M.M.M.M", "M...M...M", "MMMMMMMMM"] },
-            { name: "BLUE", map: ["MMMMMMMMM", "M...MMMMM", "M.M...MMM", "M.M.M.MMM", "M.M......", "M.M.M.M.M", "....P.M.M", "MMM.M.M.M", "MMM...M.M", "MMMMM...M", "MMMMMMMMM",] },
-            { name: "ORANGE", map: ["MMMMMMMMMM", "M......MMM", "M.M.MM.MMM", "M.M......M", "M.M.MM.M.M", ".........M", "MMM.MM.MMM", "M....P....", "M.M.MM.M.M", "M......M.M", "MMM.MM.M.M", "MMM......M", "MMMMMMMMMM"] },
-            { name: "PINK", map: ["MMMMMMMMM", "M..M....M", "M.....M.M", "M.MMM.M.M", "M.M.....M", "M.M.M.MMM", "....M....", "MMM.M.M.M", "M...P.M.M", "M.M.MMM.M", "M.M.....M", "M....M..M", "MMMMMMMMM"] }
+            { name: "RED", map: [
+"MMMMMMMMM", 
+"M...M...M", 
+"M.M.M.M.M", 
+"M.......M", 
+"M.M.M.MMM", 
+"....M....", 
+"MMM.M.M.M", 
+"M...P...M", 
+"M.M.M.M.M", 
+"M...M...M", 
+"MMMMMMMMM"] },
+
+            { name: "BLUE", map: [
+"MMMMMMMMM", 
+"M...MMMMM", 
+"M.M...MMM", 
+"M.M.M.MMM", 
+"M.M......", 
+"M.M.M.M.M", 
+"....P.M.M", 
+"MMM.M.M.M", 
+"MMM...M.M", 
+"MMMMM...M", 
+"MMMMMMMMM",] },
+
+            { name: "ORANGE", map: [
+"MMMMMMMMMM", 
+"M......MMM", 
+"M.M.MM.MMM", 
+"M.M......M", 
+"M.M.MM.M.M", 
+".........M", 
+"MMM.MM.MMM", 
+"M....P....", 
+"M.M.MM.M.M", 
+"M......M.M", 
+"MMM.MM.M.M", 
+"MMM......M", 
+"MMMMMMMMMM"] },
+
+            { name: "PINK", map: [
+"MMMMMMMMM", 
+"M..M....M", 
+"M.....M.M", 
+"M.MMM.M.M", 
+"M.M.....M", 
+"M.M.M.MMM", 
+"....M....", 
+"MMM.M.M.M", 
+"M...P.M.M", 
+"M.M.MMM.M", 
+"M.M.....M", 
+"M....M..M", 
+"MMMMMMMMM"] }
         ];
+
 
         // === ゲーム状態変数 ===
         // 🚀 修正: SHOWING_INTERIM_RESULTS を追加
@@ -463,6 +519,7 @@ PAC-MAN × RACE × PUZZLE<BR>
         // 🚀 追加: ジャイロ操作用状態変数
         let isGyroControlActive = false;
         let controlMode = 'SWIPE'; // SWIPE, GYRO, KEYBOARD のいずれか
+let inputDirection = { x: 0, y: 0 };
 
         let MAP = [];
         let MAP_WIDTH = 0;
@@ -481,6 +538,8 @@ PAC-MAN × RACE × PUZZLE<BR>
         let pacman = {
             x: 0, y: 0, dx: 0, dy: 0, nextDx: 0, nextDy: 0,
             isBoosting: false, boostEndTime: 0, turnAttemptTime: 0, stoppedTime: 0      
+		// 左右・前後入力の現在の値
+	
         };
         
         // 🚀 追加: グランプリ途中結果表示用の一時変数
@@ -1333,33 +1392,50 @@ PAC-MAN × RACE × PUZZLE<BR>
          * 🚀 追加: デバイスの傾きイベントを処理する関数
          * @param {DeviceOrientationEvent} event 
          */
-        function handleDeviceOrientation(event) {
-            if (!isGyroControlActive || (gameState !== 'FREE_RUN' && gameState !== 'RACE')) return;
+function handleDeviceMotion(event) {
+    // ゲームの状態が操作可能でなければ、何もしない
+    if (!isGyroControlActive || (gameState !== 'FREE_RUN' && gameState !== 'RACE')) return;
 
-            const gamma = event.gamma; // 左右: -90 ~ 90
-            const beta = event.beta;   // 前後: -180 ~ 180 (0で水平)
+    // ユーザーが加えた加速度データ
+    const accel = event.acceleration; 
+    if (!accel || (accel.x === null && accel.y === null)) return; // データがない場合は処理を中断
 
-            let moveDx = 0;
-            let moveDy = 0;
-            
-            // 左右
-            if (gamma > TILT_THRESHOLD) moveDx = 1; 
-            else if (gamma < -TILT_THRESHOLD) moveDx = -1; 
+    // 加速度の絶対値が最も大きい方向を検出
+    const absX = Math.abs(accel.x);
+    const absY = Math.abs(accel.y);
 
-            // 前後 (垂直持ちを基準)
-            const verticalHoldAngle = 90; 
-            const adjustedBeta = beta - verticalHoldAngle; 
-            if (adjustedBeta < -TILT_THRESHOLD * 1.5) moveDy = -1; // 上 (手前に大きく傾ける)
-            else if (adjustedBeta > TILT_THRESHOLD * 1.5) moveDy = 1; // 下 (奥に大きく傾ける)
-            
-            // 優先方向決定と移動
-            if (moveDx !== 0 || moveDy !== 0) {
-                 if (Math.abs(gamma) > Math.abs(adjustedBeta)) attemptMove(moveDx, 0); 
-                 else attemptMove(0, moveDy); 
-            }
+    let moveDx = 0;
+    let moveDy = 0;
+
+    // Y軸（前後）の加速度が最も大きく、閾値を超えている場合
+    if (absY > absX && absY > ACCEL_THRESHOLD) {
+        // Y軸加速度が負（前方に振った） -> 上移動
+        if (accel.y < 0) {
+            moveDy = -1; 
+        } 
+        // Y軸加速度が正（後方に振った） -> 下移動
+        else {
+            moveDy = 1; 
         }
+    } 
+    // X軸（左右）の加速度が最も大きく、閾値を超えている場合
+    else if (absX > absY && absX > ACCEL_THRESHOLD) {
+        // X軸加速度が正（右に振った） -> 右移動
+        if (accel.x > 0) {
+            moveDx = 1; 
+        } 
+        // X軸加速度が負（左に振った） -> 左移動
+        else {
+            moveDx = -1; 
+        }
+    }
 
-
+    // 移動方向が決定された場合、次の移動を試みる
+    if (moveDx !== 0 || moveDy !== 0) {
+        // XとYの加速度が同時に閾値を超えた場合、絶対値が大きい方を優先する
+        attemptMove(moveDx, moveDy);
+    }
+}
         function handleKeyDown(e) { 
              if (isGyroControlActive) return; // 🚀 ジャイロ中はスキップ
              if (gameState !== 'FREE_RUN' && gameState !== 'RACE') return; 
@@ -1480,7 +1556,7 @@ PAC-MAN × RACE × PUZZLE<BR>
                 DeviceOrientationEvent.requestPermission()
                     .then(permissionState => {
                         if (permissionState === 'granted') {
-                            window.addEventListener('deviceorientation', handleDeviceOrientation);
+                            window.addEventListener('devicemotion', handleDeviceOrientation);
                             setControlMode('GYRO');
                             gyroControlButton.textContent = '✅ ジャイロ操作が有効です (クリックで解除)';
                             gyroControlButton.style.backgroundColor = '#4CAF50';
@@ -1495,7 +1571,7 @@ PAC-MAN × RACE × PUZZLE<BR>
             } else {
                 // iOS 13未満やAndroidなど、許可が不要な環境
                 if ('DeviceOrientationEvent' in window) {
-                    window.addEventListener('deviceorientation', handleDeviceOrientation);
+                    window.addEventListener('devicemotion', handleDeviceOrientation);
                     setControlMode('GYRO');
                     gyroControlButton.textContent = '✅ ジャイロ操作が有効です (クリックで解除)';
                     gyroControlButton.style.backgroundColor = '#4CAF50';
@@ -1509,7 +1585,7 @@ PAC-MAN × RACE × PUZZLE<BR>
              gyroControlButton.addEventListener('click', () => {
                  if (isGyroControlActive) {
                      // 解除
-                     window.removeEventListener('deviceorientation', handleDeviceOrientation);
+                     window.removeEventListener('devicemotion', handleDeviceOrientation);
                      setControlMode('SWIPE'); 
                      gyroControlButton.textContent = '▶ ジャイロ操作を有効化';
                      gyroControlButton.style.backgroundColor = '#FF9800'; 
