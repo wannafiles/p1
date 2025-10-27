@@ -422,6 +422,7 @@ PAC-MAN × RACE × PUZZLE<BR>
 	// 加速度センサー操作のための閾値 (m/s^2)
 	// この値は、テストプレイを通じて調整が必要です
 	const ACCEL_THRESHOLD = 5.0;
+	const ROTATION_THRESHOLD = 200;
 
         const TRACK_COLORS = [
             '#FF4444', // Maze 1 (赤色ベース)
@@ -1401,64 +1402,53 @@ function handleDeviceMotion(event) {
             // ゲームの状態が操作可能でなければ、何もしない
             if (!isGyroControlActive || (gameState !== 'FREE_RUN' && gameState !== 'RACE')) return;
 
-            // ユーザーが加えた加速度データ
-            const accel = event.acceleration; 
+            // ★★★★★ 変更点 ★★★★★
+            // event.acceleration の代わりに event.rotationRate を使用
+            const rate = event.rotationRate;
             
-            // ▼▼▼▼▼ 修正点 1 (Y軸 -> Z軸) ▼▼▼▼▼
-            // Yの代わりにZのデータがあるかチェック
-            if (!accel || (accel.x === null && accel.z === null)) return; 
-            // ▲▲▲▲▲ 修正点 1 ▲▲▲▲▲
+            // 必要なデータ（alpha, beta）があるかチェック
+            if (!rate || (rate.alpha === null && rate.beta === null)) return; 
 
-            // 加速度の絶対値が最も大きい方向を検出
-            const absX = Math.abs(accel.x);
-            // const absY = Math.abs(accel.y); // Y軸は使用しない
-            
-            // ▼▼▼▼▼ 修正点 2 (Y軸 -> Z軸) ▼▼▼▼▼
-            const absZ = Math.abs(accel.z); // Z軸の絶対値を取得
-            // ▲▲▲▲▲ 修正点 2 ▲▲▲▲▲
+            const absAlpha = Math.abs(rate.alpha); // X軸 (奥/手前) の回転速度
+            const absBeta = Math.abs(rate.beta);   // Y軸 (左/右) の回転速度
 
             let moveDx = 0;
             let moveDy = 0;
 
-            // ▼▼▼▼▼ 修正点 3 (Y軸 -> Z軸) ▼▼▼▼▼
-            // Z軸（奥/手前）の加速度が最も大きく、閾値を超えている場合
-            if (absZ > absX && absZ > ACCEL_THRESHOLD) {
-                // Z軸加速度が負（奥に振った） -> 上移動
-                // ※奥に振ると、端末は手前に加速(Z+)、または奥に減速(Z-)します。
-                //   端末によってZ軸の向きが異なる場合があるため、
-                //   もし動きが逆なら (accel.z > 0) に変更してください。
-                if (accel.z < 0) { 
+            // X軸 (奥/手前) の回転が最も大きく、閾値を超えている場合
+            if (absAlpha > absBeta && absAlpha > ROTATION_THRESHOLD) {
+                
+                // rate.alpha > 0: 奥に傾けた (上側が下に)
+                if (rate.alpha > 0) {
                     moveDy = -1; // 上
                 } 
-                // Z軸加速度が正（手前に振った） -> 下移動
+                // rate.alpha < 0: 手前に傾けた (下側が下に)
                 else {
                     moveDy = 1; // 下
                 }
             } 
-            // ▲▲▲▲▲ 修正点 3 ▲▲▲▲▲
-            
-            // ▼▼▼▼▼ 修正点 4 (Y軸 -> Z軸) ▼▼▼▼▼
-            // X軸（左右）の加速度が最も大きく、閾値を超えている場合
-            // 比較対象を absY から absZ に変更
-            else if (absX > absZ && absX > ACCEL_THRESHOLD) {
-            // ▲▲▲▲▲ 修正点 4 ▲▲▲▲▲
-            
-                // X軸加速度が正（右に振った） -> 右移動
-                if (accel.x > 0) {
-                    moveDx = 1; 
+            // Y軸 (左/右) の回転が最も大きい場合
+            else if (absBeta > absAlpha && absBeta > ROTATION_THRESHOLD) {
+                
+                // rate.beta > 0: 右に傾けた (右側が下に)
+                if (rate.beta > 0) {
+                    moveDx = 1; // 右
                 } 
-                // X軸加速度が負（左に振った） -> 左移動
+                // rate.beta < 0: 左に傾けた (左側が下に)
                 else {
-                    moveDx = -1; 
+                    moveDx = -1; // 左
                 }
             }
 
             // 移動方向が決定された場合、次の移動を試みる
             if (moveDx !== 0 || moveDy !== 0) {
-                // XとZの加速度が同時に閾値を超えた場合、絶対値が大きい方を優先する
                 attemptMove(moveDx, moveDy);
             }
-        }        function handleKeyDown(e) { 
+            // ★★★★★ 変更ここまで ★★★★★
+        }
+
+
+        function handleKeyDown(e) { 
              if (isGyroControlActive) return; // 🚀 ジャイロ中はスキップ
              if (gameState !== 'FREE_RUN' && gameState !== 'RACE') return; 
              let moveDx = 0, moveDy = 0; 
