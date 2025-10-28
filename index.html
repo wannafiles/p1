@@ -329,7 +329,11 @@ PAC-MAN × RACE × PUZZLE<BR>
                 <span style="color: yellow;">▶</span>振り操作に切り替え
             </button>
             
-        </div>
+            <hr style="border-top: 1px solid #777; width: 90%; margin-top: 15px;">
+            <button id="resetBestTimesButton" class="mode-button" style="background-color: #DC3545; color: white; margin-top: 10px;">
+                全ベストタイムをリセット
+            </button>
+            </div>
        
  <div id="grandprix-results" style="display: none; margin-top: 10px;">
             <h2>🏆 総合結果</h2>
@@ -400,6 +404,10 @@ PAC-MAN × RACE × PUZZLE<BR>
         const grandPrixButton2P = document.getElementById('grandPrixButton2P');
         const bestGrandPrixTimeDisplay1P = document.getElementById('bestGrandPrixTimeDisplay1P');
         const bestGrandPrixTimeDisplay2P = document.getElementById('bestGrandPrixTimeDisplay2P');
+
+        // ▼▼▼ ここから追加 (リセットボタン) ▼▼▼
+        const resetBestTimesButton = document.getElementById('resetBestTimesButton');
+        // ▲▲▲ ここまで追加 ▲▲▲
 
 
         // === ゲーム定数 ===
@@ -1315,16 +1323,55 @@ let inputDirection = { x: 0, y: 0 };
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
         
+        // ▼▼▼ ここから修正 (loadBestTimes) ▼▼▼
         function loadBestTimes() {
-             const bestGrandPrix1P = localStorage.getItem('bestGrandPrixTime1P');
-             bestGrandPrixTime1P = bestGrandPrix1P ? parseInt(bestGrandPrix1P) : Infinity;
-             const bestGrandPrix2P = localStorage.getItem('bestGrandPrixTime2P');
-             bestGrandPrixTime2P = bestGrandPrix2P ? parseInt(bestGrandPrix2P) : Infinity;
+             // 修正: ローカル変数名を変えて、グローバル変数に正しく代入する
+             const bestGrandPrix1P_storage = localStorage.getItem('bestGrandPrixTime1P');
+             bestGrandPrixTime1P = bestGrandPrix1P_storage ? parseInt(bestGrandPrix1P_storage) : Infinity;
+             
+             const bestGrandPrix2P_storage = localStorage.getItem('bestGrandPrixTime2P');
+             bestGrandPrixTime2P = bestGrandPrix2P_storage ? parseInt(bestGrandPrix2P_storage) : Infinity;
+             
              for (let i = 0; i < TRACKS.length; i++) {
                  const bestSingle = localStorage.getItem(`bestTimeTrack${i}`);
                  bestSingleRaceTimes[i] = bestSingle ? parseInt(bestSingle) : Infinity;
              }
         }
+        // ▲▲▲ ここまで修正 ▲▲▲
+
+        // ▼▼▼ ここから追加 (resetAllBestTimes) ▼▼▼
+        /**
+         * 🚀 追加: 全てのベストタイムをリセットする関数
+         */
+        function resetAllBestTimes() {
+            // ユーザーに最終確認
+            if (!confirm('本当にすべてのベストタイムをリセットしますか？\nこの操作は元に戻せません。')) {
+                return;
+            }
+
+            try {
+                // localStorage から関連するキーをすべて削除
+                localStorage.removeItem('bestGrandPrixTime1P');
+                localStorage.removeItem('bestGrandPrixTime2P');
+                for (let i = 0; i < TRACKS.length; i++) {
+                    localStorage.removeItem(`bestTimeTrack${i}`);
+                }
+
+                // メモリ上のタイムをリセットするために loadBestTimes を再実行
+                loadBestTimes(); 
+                
+                // メニューの表示を最新の状態（リセット後）に更新
+                showMenu();
+                
+                alert('ベストタイムをリセットしました。');
+
+            } catch (e) {
+                console.error("ベストタイムのリセットに失敗しました:", e);
+                alert('リセット処理中にエラーが発生しました。');
+            }
+        }
+        // ▲▲▲ ここまで追加 ▲▲▲
+
 
         // 🚀 追加: 制御モード切り替え関数
 // 🚀 追加: 制御モード切り替え関数
@@ -1492,6 +1539,12 @@ function handleDeviceMotion(event) {
         
 
         // --- イベントリスナー ---
+        
+        // ▼▼▼ ここから追加 (リセットボタンリスナー) ▼▼▼
+        if (resetBestTimesButton) {
+            resetBestTimesButton.addEventListener('click', resetAllBestTimes);
+        }
+        // ▲▲▲ ここまで追加 ▲▲▲
         
         grandPrixButton1P.addEventListener('click', () => {
             grandPrixData.player1.results = []; 
