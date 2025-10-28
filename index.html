@@ -326,7 +326,7 @@ PAC-MAN × RACE × PUZZLE<BR>
             </div>
             <hr style="border-top: 1px solid #777; width: 90%;">
             <button id="gyroControlButton" class="mode-button" style="margin-top: 15px; background-color: #FF9800;">
-                <span style="color: yellow;">▶</span>傾け操作に切り替え
+                <span style="color: yellow;">▶</span>振り操作に切り替え
             </button>
             
         </div>
@@ -1304,10 +1304,10 @@ let inputDirection = { x: 0, y: 0 };
              const gyroButton = document.getElementById('gyroControlButton');
              if (gyroButton) {
                  if (isGyroControlActive) {
-                    gyroButton.textContent = '✅水平から傾けて移動 (クリック解除)';
+                    gyroButton.textContent = '✅スワイプ操作に切り替え';
                     gyroButton.style.backgroundColor = '#4CAF50';
                  } else {
-                    gyroButton.textContent = '▶傾け操作に切り替え';
+                    gyroButton.textContent = '▶振り操作に切り替え';
                     gyroButton.style.backgroundColor = '#FF9800'; 
                  }
             }
@@ -1599,7 +1599,7 @@ if (gyroControlButton) {
                      // 解除
                      window.removeEventListener('devicemotion', handleDeviceMotion);
                      setControlMode('SWIPE'); 
-                     gyroControlButton.textContent = '▶傾け操作に切り替え';
+                     gyroControlButton.textContent = '▶振り操作に切り替え';
                      gyroControlButton.style.backgroundColor = '#FF9800'; 
                  } else {
                      // 有効化
